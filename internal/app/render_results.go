@@ -8,7 +8,12 @@ func (r *Renderer) drawResults(model *Model, width, height, keyboardStartY int) 
 	if resultsTop < 0 || resultsBottom < 0 || resultsBottom >= height {
 		return
 	}
-	keyboardBottom := keyboardStartY + len(keyboardRows) - 1
+	keyboardBottom := keyboardStartY - 1
+	if keyboardStartY < height {
+		if kbdHeight := keyboardHeight(); kbdHeight > 0 {
+			keyboardBottom = keyboardStartY + kbdHeight - 1
+		}
+	}
 	if resultsTop <= keyboardBottom {
 		return
 	}

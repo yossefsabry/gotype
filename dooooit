@@ -1,19 +1,87 @@
-⚠️ Minor Issues to Consider
-1. Render Still Called Every 80ms
-The ticker still runs at 12fps even when nothing changed. You could:
-- Only render when needsRender is true (which you do)
-- Remove the if needsRender check from main loop (already there ✅)
-Actually, looking at app.go:84-88, you're doing this correctly! ✅
-2. Review Mode Calls buildLines Directly
-In review.go:8, ScrollReview(), ReviewTop(), ReviewBottom() - all call buildLines() directly instead of using the cache.
-Fix: Use model.linesForWidth(model.Layout.TextWidth) instead.
-3. Benchmark Doesn't Test Cache
-The BenchmarkRender doesn't type any characters, so targetVersion stays at 0 and cache is always valid. Not a real issue, just FYI.
+# Zen Mode Implementation Plan
 
+## Goal
+Clean, distraction-free typing environment. During typing: text only. After finishing: show results normally.
 
- Performance Benchmarks
-| Operation | Time Before | Time After | Change |
-|-----------|-------------|------------|---------|
-| Render | 893μs | 962μs | ⚠️ +8% |
-| BuildLines | 4.9μs | 5.6μs | ⚠️ +14% |
-| GeneratorBuild | 18μs | 19μs | ~same |
+## Tasks
+
+### 1. Mode Infrastructure
+**File: internal/app/layout.go**
+- [ ] Add "mode:zen" to modeOrder slice
+- [ ] Add "mode:zen" to regionLabels map with label "zen"
+- [ ] Add case "mode:zen" in styleForRegion() to handle theme highlighting
+
+**File: internal/app/input.go**
+- [ ] Add case "mode:zen" in applyRegion() switch
+- [ ] Reset model and recalculate layout on mode switch
+- [ ] Show message: "zen mode - press <esc> to exit" on switch
+
+**File: internal/app/persist.go**
+- [ ] Update modeToString() to handle ModeZen -> "zen"
+- [ ] Update modeFromString() to parse "zen" -> ModeZen
+
+### 2. Rendering Changes
+**File: internal/app/render.go**
+- [ ] Add isZenMode helper: model.Options.Mode == ModeZen
+- [ ] Modify Render() to conditionally skip elements when in zen mode AND not finished
+
+**File: internal/app/render_panels.go**
+- [ ] drawTopBar(): skip if zen mode (no mode/options bar)
+- [ ] drawStats(): skip if zen mode AND not finished  
+- [ ] drawFooter(): simplify message for zen mode
+- [ ] drawThemeMenu(): skip in zen mode
+
+**File: internal/app/render_keyboard.go**
+- [ ] drawKeyboard(): skip if zen mode AND not finished
+
+**File: internal/app/render_results.go**
+- [ ] drawResults(): keep as-is (always show after finishing)
+
+### 3. Layout Adjustments
+**File: internal/app/layout.go**
+- [ ] Modify Recalculate() for zen mode layout:
+  - TopY = 0 (no top bar)
+  - StatsY = 0 (hide stats during typing)
+  - TextY = 1 (text starts immediately)
+  - Text area uses more vertical space
+- [ ] When finished (any mode): always show stats/results
+
+**File: internal/app/render_text.go**
+- [ ] drawText(): expand text area when in zen mode
+  - Use full available vertical space
+  - More visible lines or larger text area
+
+### 4. Test & Verify
+- [ ] Run go build ./...
+- [ ] Run go vet ./...
+- [ ] Run go test ./...
+- [ ] Test normal mode still works
+- [ ] Test zen mode switching
+- [ ] Test zen mode typing (clean UI)
+- [ ] Test zen mode results (shows after finish)
+- [ ] Test persistence (zen mode saves/restores)
+
+## UI Behavior Summary
+
+| Element | Normal Mode | Zen Mode (Typing) | Zen Mode (Finished) |
+|---------|-------------|-------------------|---------------------|
+| Top bar (modes) | Show | Hide | Hide |
+| Stats bar (WPM/acc) | Show | Hide | Show |
+| Text area | Normal | Larger/Full | Normal |
+| Virtual keyboard | Show | Hide | Hide |
+| Results | After finish | After finish | Show |
+| Footer | Full | Minimal | Full |
+
+## Controls in Zen Mode
+- Type any key to start
+- Esc - quit application
+- Tab - restart test
+- Ctrl+W - delete word
+- Backspace - delete char
+- Arrow keys - review after finishing
+
+## Notes
+- Keep existing test benchmarks working
+- Ensure cache (linesForWidth) still works properly
+- Maintain 80ms render tick behavior
+- Zen mode settings persist via preferences
