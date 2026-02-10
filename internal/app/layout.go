@@ -30,9 +30,7 @@ type Layout struct {
 func (l *Layout) Recalculate(width, height int, mode Mode) {
 	l.Width = width
 	l.Height = height
-	if l.TopY == 0 {
-		l.TopY = 1
-	}
+	l.TopY = 1
 	menuOffset := 0
 	if l.MenuOpen {
 		menuOffset = 1

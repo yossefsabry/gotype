@@ -150,15 +150,21 @@ func updateBestScore(data *storage.Data, options Options, stats Stats, now time.
 }
 
 func modeToString(mode Mode) string {
-	if mode == ModeWords {
+	switch mode {
+	case ModeWords:
 		return "words"
+	default:
+		return "time"
 	}
-	return "time"
 }
 
 func modeFromString(value string) Mode {
-	if value == "words" {
+	switch value {
+	case "words":
 		return ModeWords
+	case "zen":
+		return ModeTime
+	default:
+		return ModeTime
 	}
-	return ModeTime
 }

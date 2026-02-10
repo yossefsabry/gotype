@@ -11,9 +11,6 @@ type Mode int
 const (
 	ModeTime Mode = iota
 	ModeWords
-	ModeQuote
-	ModeZen
-	ModeCustom
 )
 
 type Options struct {

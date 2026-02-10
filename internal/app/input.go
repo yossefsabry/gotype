@@ -130,10 +130,8 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 			m.Reset()
 			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
 			return true
-		default:
-			m.SetMessage("only time and words are ready", now, 2*time.Second)
-			return true
 		}
+		return false
 	case strings.HasPrefix(id, "sel:"):
 		option, ok := selectorByID(id)
 		if !ok {
