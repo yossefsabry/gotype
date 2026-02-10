@@ -1,8 +1,8 @@
 package app
 
-const glyphSize = 3
+const textScale = 3
 
-type glyph [glyphSize]uint8
+type glyph [textScale]uint8
 
 var bigGlyphs = map[rune]glyph{
 	' ': {0b000, 0b000, 0b000},
