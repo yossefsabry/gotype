@@ -53,21 +53,24 @@ type UIState struct {
 }
 
 type Model struct {
-	Options     Options
-	Timer       Timer
-	Stats       Stats
-	Text        Text
-	Generator   *Generator
-	Layout      Layout
-	UI          UIState
-	ThemeID     string
-	ThemeMenu   bool
-	LastKey     rune
-	LastKeyAt   time.Time
-	Results     ResultsState
-	ReviewStart int
-	Mistakes    map[rune]int
-	history     StatsHistory
+	Options           Options
+	Timer             Timer
+	Stats             Stats
+	Text              Text
+	Generator         *Generator
+	Layout            Layout
+	UI                UIState
+	ThemeID           string
+	ThemeMenu         bool
+	LastKey           rune
+	LastKeyAt         time.Time
+	Results           ResultsState
+	ReviewStart       int
+	Mistakes          map[rune]int
+	history           StatsHistory
+	lineCache         LineCache
+	targetVersion     int
+	lastDerivedSecond int64
 }
 
 const (
@@ -96,6 +99,7 @@ func (m *Model) Reset() {
 	} else {
 		m.Text.Target = m.Generator.Build(initialWordCount, m.Options)
 	}
+	m.bumpTargetVersion()
 	m.Text.Typed = m.Text.Typed[:0]
 	if m.Options.Mode == ModeWords {
 		m.Timer = Timer{}
@@ -107,6 +111,7 @@ func (m *Model) Reset() {
 	m.ResetReview()
 	m.resetMistakes()
 	m.history.Reset()
+	m.lastDerivedSecond = -1
 	m.LastKey = 0
 	m.UpdateDerived(time.Now())
 }
@@ -143,8 +148,11 @@ func (m *Model) Update(now time.Time) bool {
 		}
 	}
 	if m.Timer.Started {
-		if m.UpdateDerived(now) {
-			changed = true
+		currentSecond := int64(m.elapsedForStats(now) / time.Second)
+		if currentSecond != m.lastDerivedSecond {
+			if m.UpdateDerived(now) {
+				changed = true
+			}
 		}
 	}
 	if m.UI.Message != "" && now.After(m.UI.MessageUntil) {
@@ -218,10 +226,13 @@ func (m *Model) UpdateDerived(now time.Time) bool {
 	newRawWPM := 0
 	if m.Timer.Started {
 		elapsed := m.elapsedForStats(now)
+		m.lastDerivedSecond = int64(elapsed / time.Second)
 		minutes := elapsed.Minutes()
 		newWPM = int(float64(m.Stats.Correct)/5.0/minutes + 0.5)
 		newRawWPM = int(float64(m.Stats.Correct+m.Stats.Incorrect)/5.0/minutes + 0.5)
 		m.history.Record(elapsed, newWPM)
+	} else {
+		m.lastDerivedSecond = -1
 	}
 	changed := newAccuracy != m.Stats.Accuracy || newWPM != m.Stats.WPM || newRawWPM != m.Stats.RawWPM
 	m.Stats.Accuracy = newAccuracy
@@ -243,6 +254,7 @@ func (m *Model) ensureTarget(minLength int) {
 		return
 	}
 	m.Text.Target = m.Generator.Extend(m.Text.Target, extendWordCount, m.Options)
+	m.bumpTargetVersion()
 }
 
 func (m *Model) removeTypedRange(start, end int) {

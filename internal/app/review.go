@@ -5,7 +5,7 @@ func (m *Model) ResetReview() {
 }
 
 func (m *Model) InitReviewStart() {
-	lines := buildLines(m.Text.Target, m.Layout.TextWidth)
+	lines := m.linesForWidth(m.Layout.TextWidth)
 	if len(lines) == 0 {
 		m.ReviewStart = 0
 		return
@@ -17,7 +17,7 @@ func (m *Model) ScrollReview(delta int) bool {
 	if !m.Timer.Finished {
 		return false
 	}
-	lines := buildLines(m.Text.Target, m.Layout.TextWidth)
+	lines := m.linesForWidth(m.Layout.TextWidth)
 	if len(lines) == 0 {
 		return false
 	}
@@ -54,7 +54,7 @@ func (m *Model) ReviewBottom() bool {
 	if !m.Timer.Finished {
 		return false
 	}
-	lines := buildLines(m.Text.Target, m.Layout.TextWidth)
+	lines := m.linesForWidth(m.Layout.TextWidth)
 	if len(lines) == 0 {
 		return false
 	}
