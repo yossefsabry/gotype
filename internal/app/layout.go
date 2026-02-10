@@ -22,24 +22,37 @@ type Layout struct {
 	TextX       int
 	FooterY     int
 	MenuOpen    bool
+	Focus       bool
 	Regions     []Region
 	MenuRegions []Region
 	Separators  []int
 }
 
-func (l *Layout) Recalculate(width, height int, mode Mode) {
+func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 	l.Width = width
 	l.Height = height
-	l.TopY = 1
+	l.Focus = focus
+
+	menuOpen := l.MenuOpen && !focus
+	topY := 1
+	if focus {
+		topY = 0
+	}
+	l.TopY = topY
 	menuOffset := 0
-	if l.MenuOpen {
+	if menuOpen {
 		menuOffset = 1
 		l.MenuY = l.TopY + 1
 	} else {
 		l.MenuY = 0
 	}
-	l.StatsY = l.TopY + 2 + menuOffset
-	l.TextY = l.TopY + 4 + menuOffset
+	if focus {
+		l.StatsY = l.TopY
+		l.TextY = l.TopY + 2
+	} else {
+		l.StatsY = l.TopY + 2 + menuOffset
+		l.TextY = l.TopY + 4 + menuOffset
+	}
 	l.FooterY = height - 2
 
 	textWidth := width - 8
@@ -58,6 +71,9 @@ func (l *Layout) Recalculate(width, height int, mode Mode) {
 	l.Regions = l.Regions[:0]
 	l.MenuRegions = l.MenuRegions[:0]
 	l.Separators = l.Separators[:0]
+	if focus {
+		return
+	}
 
 	x := 2
 	add := func(id string) {
@@ -85,7 +101,7 @@ func (l *Layout) Recalculate(width, height int, mode Mode) {
 
 	add("btn:themes")
 
-	if l.MenuOpen {
+	if menuOpen {
 		x := 2
 		for _, theme := range ThemeOptions() {
 			label := theme.Label

@@ -17,6 +17,23 @@ func (m *Model) elapsedForStats(now time.Time) time.Duration {
 	return elapsed
 }
 
+func (m *Model) focusActive() bool {
+	return m.Timer.Started && !m.Timer.Finished
+}
+
+func (m *Model) syncLayoutFocus() bool {
+	focus := m.focusActive()
+	if m.Layout.Focus == focus {
+		return false
+	}
+	m.Layout.Focus = focus
+	if m.Layout.Width <= 0 || m.Layout.Height <= 0 {
+		return false
+	}
+	m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, focus)
+	return true
+}
+
 func (m *Model) resetMistakes() {
 	if m.Mistakes == nil {
 		m.Mistakes = make(map[rune]int, 32)

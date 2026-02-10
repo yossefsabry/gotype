@@ -34,8 +34,12 @@ func (r *Renderer) Render(model *Model) {
 		r.forceClear = false
 	}
 
-	r.drawTopBar(model, width)
-	r.drawThemeMenu(model, width)
+	focus := model.focusActive()
+	if !focus {
+		r.fillLine(0, width, r.styles.Base)
+		r.drawTopBar(model, width)
+		r.drawThemeMenu(model, width)
+	}
 	r.drawStats(model, width)
 	keyboardStartY := r.keyboardStartY(model, height)
 	r.drawText(model, width, height, keyboardStartY)

@@ -15,7 +15,7 @@ func BenchmarkRender(b *testing.B) {
 	screen.SetSize(120, 40)
 
 	model := NewModel()
-	model.Layout.Recalculate(120, 40, model.Options.Mode)
+	model.Layout.Recalculate(120, 40, model.Options.Mode, model.focusActive())
 	renderer := NewRenderer(screen)
 
 	b.ReportAllocs()

@@ -42,6 +42,10 @@ func (r *Renderer) drawThemeMenu(model *Model, width int) {
 }
 
 func (r *Renderer) drawStats(model *Model, width int) {
+	if model.focusActive() {
+		r.drawFocusStatus(model, width)
+		return
+	}
 	label := "english"
 	status := "time: " + formatDuration(model.Options.Duration)
 	if model.Options.Mode == ModeWords {
@@ -60,6 +64,23 @@ func (r *Renderer) drawStats(model *Model, width int) {
 		x = 0
 	}
 	r.drawString(x, model.Layout.StatsY, stats, r.styles.Dim)
+}
+
+func (r *Renderer) drawFocusStatus(model *Model, width int) {
+	prefix := "time left: "
+	value := formatDuration(model.Timer.Remaining)
+	if model.Options.Mode == ModeWords {
+		prefix = "words left: "
+		value = fmt.Sprintf("%d", model.WordsLeft())
+	}
+	lineLen := len(prefix) + len(value)
+	x := (width - lineLen) / 2
+	if x < 0 {
+		x = 0
+	}
+	r.fillLine(model.Layout.StatsY, width, r.styles.Base)
+	r.drawString(x, model.Layout.StatsY, prefix, r.styles.Dim)
+	r.drawString(x+len(prefix), model.Layout.StatsY, value, r.styles.Accent)
 }
 
 func (r *Renderer) drawFooter(model *Model, width, height int) {

@@ -123,12 +123,12 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		case "mode:time":
 			m.Options.Mode = ModeTime
 			m.Reset()
-			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
 			return true
 		case "mode:words":
 			m.Options.Mode = ModeWords
 			m.Reset()
-			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
 			return true
 		}
 		return false
@@ -148,7 +148,7 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 	case id == "btn:themes":
 		m.ThemeMenu = !m.ThemeMenu
 		m.Layout.MenuOpen = m.ThemeMenu
-		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
 		return true
 	case strings.HasPrefix(id, "theme:"):
 		themeID, ok := ThemeIDFromRegion(id)
@@ -158,7 +158,7 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		_ = m.SetTheme(themeID)
 		m.ThemeMenu = false
 		m.Layout.MenuOpen = false
-		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
 		return true
 	}
 	return false

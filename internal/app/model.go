@@ -111,6 +111,7 @@ func (m *Model) Reset() {
 	m.lastDerivedSecond = -1
 	m.LastKey = 0
 	m.UpdateDerived(time.Now())
+	m.syncLayoutFocus()
 }
 
 func (m *Model) StartTimer(now time.Time) {
@@ -125,6 +126,7 @@ func (m *Model) StartTimer(now time.Time) {
 		m.Timer.End = now.Add(m.Options.Duration)
 		m.Timer.Remaining = m.Options.Duration
 	}
+	m.syncLayoutFocus()
 }
 
 func (m *Model) Update(now time.Time) bool {
@@ -160,6 +162,9 @@ func (m *Model) Update(now time.Time) bool {
 		m.LastKey = 0
 		changed = true
 	}
+	if m.syncLayoutFocus() {
+		changed = true
+	}
 	return changed
 }
 
@@ -182,6 +187,7 @@ func (m *Model) AddRune(r rune, now time.Time) {
 		m.Timer.End = now
 	}
 	m.UpdateDerived(now)
+	m.syncLayoutFocus()
 }
 
 func (m *Model) Backspace(now time.Time) bool {
