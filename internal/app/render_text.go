@@ -2,11 +2,18 @@ package app
 
 import "github.com/gdamore/tcell/v2"
 
+const usePlainText = true
+
 func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	if width <= 0 || height <= 0 {
 		return
 	}
+	scale := textScale
 	textWidth := model.Layout.TextWidth / textScale
+	if usePlainText {
+		scale = 1
+		textWidth = model.Layout.TextWidth
+	}
 	if textWidth < 1 {
 		textWidth = 1
 	}
@@ -14,8 +21,8 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	if len(lines) == 0 {
 		return
 	}
-	lineHeight := textScale
-	lineSpacing := textScale
+	lineHeight := scale
+	lineSpacing := scale
 	areaTop := model.Layout.TextY
 	areaBottom := keyboardStartY - 2
 	if areaBottom < areaTop {
@@ -75,7 +82,7 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	for i := startLine; i < endLine; i++ {
 		line := lines[i]
 		y := textStartY + (i-startLine)*lineSpacing
-		lineX := r.centeredLineX(model, line)
+		lineX := r.centeredLineX(model, line, scale)
 		r.drawLine(model, line, lineX, y, lineHeight)
 	}
 }
@@ -107,15 +114,15 @@ func (r *Renderer) drawLine(model *Model, line Line, x, y, scale int) {
 	}
 }
 
-func (r *Renderer) centeredLineX(model *Model, line Line) int {
-	lineLen := lineVisualWidth(model.Text.Target, line)
+func (r *Renderer) centeredLineX(model *Model, line Line, scale int) int {
+	lineLen := lineVisualWidth(model.Text.Target, line, scale)
 	if model.Layout.TextWidth <= lineLen {
 		return model.Layout.TextX
 	}
 	return model.Layout.TextX + (model.Layout.TextWidth-lineLen)/2
 }
 
-func lineVisualWidth(target []rune, line Line) int {
+func lineVisualWidth(target []rune, line Line, scale int) int {
 	end := line.End
 	for end > line.Start && target[end-1] == ' ' {
 		end--
@@ -123,7 +130,7 @@ func lineVisualWidth(target []rune, line Line) int {
 	if end < line.Start {
 		return 0
 	}
-	return (end - line.Start) * textScale
+	return (end - line.Start) * scale
 }
 
 func (r *Renderer) drawRuneBlock(x, y int, ch rune, style tcell.Style, scale int) {
