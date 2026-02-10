@@ -4,12 +4,17 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/yossefsabry/gotype/internal/storage"
 )
 
 type App struct {
 	screen   tcell.Screen
 	model    *Model
 	renderer *Renderer
+	store    *Persister
+	data     storage.Data
+	prefs    storage.Preferences
+	finished bool
 }
 
 func Run() error {
@@ -24,13 +29,31 @@ func Run() error {
 	defer screen.Fini()
 
 	model := NewModel()
+	path, data := loadPersistedData()
+	if applyPreferences(model, data.Preferences) {
+		model.Reset()
+	}
+	if data.BestScores == nil {
+		data.BestScores = map[string]storage.BestScore{}
+	}
+	data.Preferences = preferencesFromModel(model)
 	width, height := screen.Size()
 	model.Layout.Recalculate(width, height)
+	var persister *Persister
+	if path != "" {
+		persister = NewPersister(path)
+	}
 
 	app := &App{
 		screen:   screen,
 		model:    model,
 		renderer: NewRenderer(screen),
+		store:    persister,
+		data:     data,
+		prefs:    data.Preferences,
+	}
+	if persister != nil {
+		defer persister.Close()
 	}
 	return app.loop()
 }
@@ -75,7 +98,8 @@ func (a *App) loop() error {
 				a.model.Layout.Recalculate(width, height)
 				needsRender = true
 			case *tcell.EventKey:
-				changed, shouldQuit := a.model.HandleKey(ev, time.Now())
+				now := time.Now()
+				changed, shouldQuit := a.model.HandleKey(ev, now)
 				if shouldQuit {
 					close(quit)
 					return nil
@@ -83,18 +107,41 @@ func (a *App) loop() error {
 				if changed {
 					needsRender = true
 				}
+				a.syncPersistence(now)
 			case *tcell.EventMouse:
 				if ev.Buttons()&tcell.Button1 != 0 {
+					now := time.Now()
 					x, y := ev.Position()
-					if a.model.HandleClick(x, y, time.Now()) {
+					if a.model.HandleClick(x, y, now) {
 						needsRender = true
 					}
+					a.syncPersistence(now)
 				}
 			}
 		case <-ticker.C:
-			if a.model.Update(time.Now()) {
+			now := time.Now()
+			if a.model.Update(now) {
 				needsRender = true
 			}
+			a.syncPersistence(now)
 		}
 	}
+}
+
+func (a *App) syncPersistence(now time.Time) {
+	if a.store == nil {
+		return
+	}
+	current := preferencesFromModel(a.model)
+	if current != a.prefs {
+		a.prefs = current
+		a.data.Preferences = current
+		a.store.Save(a.data)
+	}
+	if a.model.Timer.Finished && !a.finished {
+		if updateBestScore(&a.data, a.model.Options, a.model.Stats, now) {
+			a.store.Save(a.data)
+		}
+	}
+	a.finished = a.model.Timer.Finished
 }

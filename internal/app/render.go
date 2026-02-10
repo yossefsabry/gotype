@@ -128,9 +128,9 @@ func (r *Renderer) drawText(model *Model, width, height int) {
 }
 
 func (r *Renderer) drawFooter(model *Model, width, height int) {
-	message := "type to start  r to reset  esc to quit"
+	message := " type to start <tab> to reset  <esc> to quit "
 	if model.Timer.Finished {
-		message = "finished  r to restart  esc to quit"
+		message = " finished <tab> to restart  <esc> to quit "
 	}
 	if model.UI.Message != "" {
 		message = model.UI.Message
