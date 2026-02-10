@@ -13,24 +13,18 @@ type Styles struct {
 	PanelBg tcell.Color
 }
 
-func NewStyles() Styles {
-	bg := hexColor(0x2c2e31)
-	panel := hexColor(0x323437)
-	text := hexColor(0xd1d0c5)
-	dim := hexColor(0x646669)
-	accent := hexColor(0xe2b714)
-	errorColor := hexColor(0xca4754)
-
-	base := tcell.StyleDefault.Background(bg).Foreground(text)
+func NewStyles(theme Theme) Styles {
+	base := tcell.StyleDefault.Background(theme.Background).Foreground(theme.Text)
+	panel := tcell.StyleDefault.Background(theme.Panel).Foreground(theme.Text)
 	return Styles{
 		Base:    base,
-		Panel:   tcell.StyleDefault.Background(panel).Foreground(text),
-		Dim:     base.Foreground(dim),
-		Accent:  base.Foreground(accent),
-		Correct: base.Foreground(text),
-		Error:   base.Foreground(errorColor),
-		Cursor:  base.Background(accent).Foreground(bg),
-		PanelBg: panel,
+		Panel:   panel,
+		Dim:     base.Foreground(theme.Dim),
+		Accent:  base.Foreground(theme.Accent),
+		Correct: base.Foreground(theme.Text),
+		Error:   base.Foreground(theme.Error),
+		Cursor:  base.Background(theme.Accent).Foreground(theme.CursorText),
+		PanelBg: theme.Panel,
 	}
 }
 

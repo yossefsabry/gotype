@@ -57,6 +57,8 @@ type Model struct {
 	Generator *Generator
 	Layout    Layout
 	UI        UIState
+	ThemeID   string
+	ThemeMenu bool
 }
 
 const (
@@ -71,6 +73,7 @@ func NewModel() *Model {
 			Duration: 60 * time.Second,
 		},
 		Generator: NewGenerator(rand.NewSource(time.Now().UnixNano())),
+		ThemeID:   DefaultThemeID(),
 	}
 	model.Reset()
 	return model
@@ -184,4 +187,12 @@ func (m *Model) ensureTarget(minLength int) {
 		return
 	}
 	m.Text.Target = m.Generator.Extend(m.Text.Target, extendWordCount, m.Options)
+}
+
+func (m *Model) SetTheme(id string) bool {
+	if m.ThemeID == id {
+		return false
+	}
+	m.ThemeID = id
+	return true
 }

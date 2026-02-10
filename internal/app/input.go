@@ -11,7 +11,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 	switch event.Key() {
 	case tcell.KeyCtrlC, tcell.KeyEsc:
 		return false, true
-	case tcell.KeyCtrlR:
+	case tcell.KeyTab:
 		m.Reset()
 		return true, false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
@@ -24,7 +24,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 		return false, false
 	case tcell.KeyRune:
 		r := event.Rune()
-		if r == '\n' || r == '\t' {
+		if r == '\n' {
 			return false, false
 		}
 		if m.Timer.Finished {
@@ -45,6 +45,11 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 
 func (m *Model) HandleClick(x, y int, now time.Time) bool {
 	for _, region := range m.Layout.Regions {
+		if region.Contains(x, y) {
+			return m.applyRegion(region.ID, now)
+		}
+	}
+	for _, region := range m.Layout.MenuRegions {
 		if region.Contains(x, y) {
 			return m.applyRegion(region.ID, now)
 		}
@@ -78,6 +83,21 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 			m.Reset()
 			return true
 		}
+	case id == "btn:themes":
+		m.ThemeMenu = !m.ThemeMenu
+		m.Layout.MenuOpen = m.ThemeMenu
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height)
+		return true
+	case strings.HasPrefix(id, "theme:"):
+		themeID, ok := ThemeIDFromRegion(id)
+		if !ok {
+			return false
+		}
+		_ = m.SetTheme(themeID)
+		m.ThemeMenu = false
+		m.Layout.MenuOpen = false
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height)
+		return true
 	}
 	return false
 }

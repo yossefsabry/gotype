@@ -14,16 +14,19 @@ func (r Region) Contains(x, y int) bool {
 }
 
 type Layout struct {
-	Width      int
-	Height     int
-	TopY       int
-	StatsY     int
-	TextY      int
-	TextWidth  int
-	TextX      int
-	FooterY    int
-	Regions    []Region
-	Separators []int
+	Width       int
+	Height      int
+	TopY        int
+	MenuY       int
+	StatsY      int
+	TextY       int
+	TextWidth   int
+	TextX       int
+	FooterY     int
+	MenuOpen    bool
+	Regions     []Region
+	MenuRegions []Region
+	Separators  []int
 }
 
 func (l *Layout) Recalculate(width, height int) {
@@ -32,8 +35,15 @@ func (l *Layout) Recalculate(width, height int) {
 	if l.TopY == 0 {
 		l.TopY = 1
 	}
-	l.StatsY = l.TopY + 2
-	l.TextY = l.TopY + 4
+	menuOffset := 0
+	if l.MenuOpen {
+		menuOffset = 1
+		l.MenuY = l.TopY + 1
+	} else {
+		l.MenuY = 0
+	}
+	l.StatsY = l.TopY + 2 + menuOffset
+	l.TextY = l.TopY + 4 + menuOffset
 	l.FooterY = height - 2
 
 	textWidth := width - 8
@@ -50,6 +60,7 @@ func (l *Layout) Recalculate(width, height int) {
 	l.TextX = (width - textWidth) / 2
 
 	l.Regions = l.Regions[:0]
+	l.MenuRegions = l.MenuRegions[:0]
 	l.Separators = l.Separators[:0]
 
 	x := 2
@@ -72,6 +83,19 @@ func (l *Layout) Recalculate(width, height int) {
 	for _, id := range timeOrder {
 		add(id, regionLabels[id])
 	}
+	l.Separators = append(l.Separators, x)
+	x += 3
+
+	add("btn:themes", regionLabels["btn:themes"])
+
+	if l.MenuOpen {
+		x := 2
+		for _, theme := range ThemeOptions() {
+			label := theme.Label
+			l.MenuRegions = append(l.MenuRegions, Region{ID: ThemeRegionID(theme.ID), X: x, Y: l.MenuY, Width: len(label)})
+			x += len(label) + 2
+		}
+	}
 }
 
 var regionLabels = map[string]string{
@@ -86,6 +110,7 @@ var regionLabels = map[string]string{
 	"time:60s":    "60s",
 	"time:10m":    "10m",
 	"time:30m":    "30m",
+	"btn:themes":  "themes",
 }
 
 var modeOrder = []string{

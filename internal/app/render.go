@@ -3,29 +3,41 @@ package app
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 type Renderer struct {
-	screen tcell.Screen
-	styles Styles
+	screen     tcell.Screen
+	styles     Styles
+	themeID    string
+	forceClear bool
 }
 
 func NewRenderer(screen tcell.Screen) *Renderer {
+	defaultTheme := DefaultThemeID()
 	return &Renderer{
-		screen: screen,
-		styles: NewStyles(),
+		screen:  screen,
+		styles:  NewStyles(ThemeByID(defaultTheme)),
+		themeID: defaultTheme,
 	}
 }
 
 func (r *Renderer) Render(model *Model) {
+	r.syncTheme(model)
 	width, height := r.screen.Size()
 	r.screen.SetStyle(r.styles.Base)
-	r.screen.Clear()
+	if r.forceClear {
+		r.fillScreen(width, height, r.styles.Base)
+		r.forceClear = false
+	} else {
+		r.screen.Clear()
+	}
 
 	r.drawTopBar(model, width)
+	r.drawThemeMenu(model, width)
 	r.drawStats(model, width)
 	r.drawText(model, width, height)
 	r.drawFooter(model, width, height)
@@ -43,6 +55,23 @@ func (r *Renderer) drawTopBar(model *Model, width int) {
 
 	for _, region := range model.Layout.Regions {
 		label := regionLabels[region.ID]
+		style := r.styleForRegion(model, region.ID)
+		r.drawString(region.X, region.Y, label, r.panelStyle(style))
+	}
+}
+
+func (r *Renderer) drawThemeMenu(model *Model, width int) {
+	if !model.Layout.MenuOpen {
+		return
+	}
+	y := model.Layout.MenuY
+	r.fillLine(y, width, r.styles.Panel)
+	for _, region := range model.Layout.MenuRegions {
+		themeID, ok := ThemeIDFromRegion(region.ID)
+		if !ok {
+			continue
+		}
+		label := ThemeLabel(themeID)
 		style := r.styleForRegion(model, region.ID)
 		r.drawString(region.X, region.Y, label, r.panelStyle(style))
 	}
@@ -146,11 +175,23 @@ func (r *Renderer) styleForRegion(model *Model, id string) tcell.Style {
 			return r.styles.Accent
 		}
 		return r.styles.Dim
+	case "btn:themes":
+		if model.ThemeMenu {
+			return r.styles.Accent
+		}
+		return r.styles.Dim
 	case "mode:time":
 		return r.styles.Accent
 	case "mode:words", "mode:quote", "mode:zen", "mode:custom":
 		return r.styles.Dim
 	default:
+		if strings.HasPrefix(id, "theme:") {
+			themeID, ok := ThemeIDFromRegion(id)
+			if ok && model.ThemeID == themeID {
+				return r.styles.Accent
+			}
+			return r.styles.Dim
+		}
 		if duration, ok := timeByRegion[id]; ok {
 			if model.Options.Duration == duration {
 				return r.styles.Accent
@@ -159,6 +200,26 @@ func (r *Renderer) styleForRegion(model *Model, id string) tcell.Style {
 		}
 	}
 	return r.styles.Dim
+}
+
+func (r *Renderer) syncTheme(model *Model) {
+	if model.ThemeID == "" {
+		return
+	}
+	if r.themeID == model.ThemeID {
+		return
+	}
+	r.themeID = model.ThemeID
+	r.styles = NewStyles(ThemeByID(model.ThemeID))
+	r.forceClear = true
+}
+
+func (r *Renderer) fillScreen(width, height int, style tcell.Style) {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			r.screen.SetContent(x, y, ' ', nil, style)
+		}
+	}
 }
 
 func (r *Renderer) fillLine(y, width int, style tcell.Style) {
