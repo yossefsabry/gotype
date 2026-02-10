@@ -1,0 +1,19 @@
+⚠️ Minor Issues to Consider
+1. Render Still Called Every 80ms
+The ticker still runs at 12fps even when nothing changed. You could:
+- Only render when needsRender is true (which you do)
+- Remove the if needsRender check from main loop (already there ✅)
+Actually, looking at app.go:84-88, you're doing this correctly! ✅
+2. Review Mode Calls buildLines Directly
+In review.go:8, ScrollReview(), ReviewTop(), ReviewBottom() - all call buildLines() directly instead of using the cache.
+Fix: Use model.linesForWidth(model.Layout.TextWidth) instead.
+3. Benchmark Doesn't Test Cache
+The BenchmarkRender doesn't type any characters, so targetVersion stays at 0 and cache is always valid. Not a real issue, just FYI.
+
+
+ Performance Benchmarks
+| Operation | Time Before | Time After | Change |
+|-----------|-------------|------------|---------|
+| Render | 893μs | 962μs | ⚠️ +8% |
+| BuildLines | 4.9μs | 5.6μs | ⚠️ +14% |
+| GeneratorBuild | 18μs | 19μs | ~same |
