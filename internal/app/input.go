@@ -22,6 +22,36 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 			return true, false
 		}
 		return false, false
+	case tcell.KeyUp:
+		if m.ScrollReview(-1) {
+			return true, false
+		}
+		return false, false
+	case tcell.KeyDown:
+		if m.ScrollReview(1) {
+			return true, false
+		}
+		return false, false
+	case tcell.KeyPgUp:
+		if m.ScrollReview(-maxVisibleLines) {
+			return true, false
+		}
+		return false, false
+	case tcell.KeyPgDn:
+		if m.ScrollReview(maxVisibleLines) {
+			return true, false
+		}
+		return false, false
+	case tcell.KeyHome:
+		if m.ReviewTop() {
+			return true, false
+		}
+		return false, false
+	case tcell.KeyEnd:
+		if m.ReviewBottom() {
+			return true, false
+		}
+		return false, false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if m.Timer.Finished {
 			return false, false
@@ -59,9 +89,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 }
 
 func (m *Model) registerKey(r rune, now time.Time) {
-	if r >= 'A' && r <= 'Z' {
-		r = r + ('a' - 'A')
-	}
+	r = normalizeRune(r)
 	m.LastKey = r
 	m.LastKeyAt = now
 }

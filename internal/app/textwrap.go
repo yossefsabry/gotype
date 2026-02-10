@@ -5,7 +5,10 @@ type Line struct {
 	End   int
 }
 
-const maxWordsPerLine = 10
+const (
+	maxWordsPerLine = 10
+	maxVisibleLines = 4
+)
 
 func buildLines(target []rune, width int) []Line {
 	if width <= 0 || len(target) == 0 {
@@ -85,4 +88,23 @@ func lineIndexFor(lines []Line, index int) int {
 		}
 	}
 	return len(lines) - 1
+}
+
+func defaultStartLine(lines []Line, cursorIndex int) int {
+	if len(lines) == 0 {
+		return 0
+	}
+	activeLine := lineIndexFor(lines, cursorIndex)
+	startLine := 0
+	if activeLine > 1 {
+		startLine = activeLine - 1
+	}
+	maxStart := len(lines) - maxVisibleLines
+	if maxStart < 0 {
+		maxStart = 0
+	}
+	if startLine > maxStart {
+		startLine = maxStart
+	}
+	return startLine
 }

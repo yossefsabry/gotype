@@ -12,6 +12,7 @@ type Styles struct {
 	Cursor    tcell.Style
 	Key       tcell.Style
 	KeyActive tcell.Style
+	KeyError  tcell.Style
 	PanelBg   tcell.Color
 }
 
@@ -28,6 +29,7 @@ func NewStyles(theme Theme) Styles {
 		Cursor:    base.Background(theme.Accent).Foreground(theme.CursorText),
 		Key:       tcell.StyleDefault.Background(theme.KeyBackground).Foreground(theme.KeyText),
 		KeyActive: tcell.StyleDefault.Background(theme.KeyActiveBg).Foreground(theme.KeyActiveText),
+		KeyError:  tcell.StyleDefault.Background(theme.KeyBackground).Foreground(theme.Error),
 		PanelBg:   theme.Panel,
 	}
 }

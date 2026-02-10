@@ -66,7 +66,7 @@ var themeOptions = []Theme{
 	},
 	{
 		ID:            "caption",
-		Label:         "captsion",
+		Label:         "caption",
 		Background:    hexColor(0x232323),
 		Panel:         hexColor(0x2b2b2b),
 		Text:          hexColor(0xdadada),

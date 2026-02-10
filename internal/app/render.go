@@ -13,6 +13,8 @@ type Renderer struct {
 	styles     Styles
 	themeID    string
 	forceClear bool
+	lastWidth  int
+	lastHeight int
 }
 
 func NewRenderer(screen tcell.Screen) *Renderer {
@@ -27,12 +29,15 @@ func NewRenderer(screen tcell.Screen) *Renderer {
 func (r *Renderer) Render(model *Model) {
 	r.syncTheme(model)
 	width, height := r.screen.Size()
+	if width != r.lastWidth || height != r.lastHeight {
+		r.forceClear = true
+		r.lastWidth = width
+		r.lastHeight = height
+	}
 	r.screen.SetStyle(r.styles.Base)
 	if r.forceClear {
 		r.fillScreen(width, height, r.styles.Base)
 		r.forceClear = false
-	} else {
-		r.screen.Clear()
 	}
 
 	r.drawTopBar(model, width)
@@ -41,6 +46,7 @@ func (r *Renderer) Render(model *Model) {
 	keyboardStartY := r.keyboardStartY(model, height)
 	r.drawText(model, width, height, keyboardStartY)
 	r.drawKeyboard(model, width, height, keyboardStartY)
+	r.drawResults(model, width, height, keyboardStartY)
 	r.drawFooter(model, width, height)
 
 	r.screen.Show()
@@ -63,6 +69,7 @@ func (r *Renderer) drawTopBar(model *Model, width int) {
 
 func (r *Renderer) drawThemeMenu(model *Model, width int) {
 	if !model.Layout.MenuOpen {
+		r.fillLine(model.Layout.TopY+1, width, r.styles.Base)
 		return
 	}
 	y := model.Layout.MenuY
@@ -86,10 +93,12 @@ func (r *Renderer) drawStats(model *Model, width int) {
 	} else if model.Timer.Started {
 		status = "time: " + formatDuration(model.Timer.Remaining)
 	}
-	stats := fmt.Sprintf("%s  wpm: %d  acc: %d%%  %s", label, model.Stats.WPM, model.Stats.Accuracy, status)
+	chars := len(model.Text.Typed)
+	stats := fmt.Sprintf("%s  wpm: %d  acc: %d%%  ch: %d  streak: %d  %s", label, model.Stats.WPM, model.Stats.Accuracy, chars, model.Stats.Streak, status)
 	if model.Timer.Finished {
-		stats = fmt.Sprintf("finished  wpm: %d  acc: %d%%", model.Stats.WPM, model.Stats.Accuracy)
+		stats = fmt.Sprintf("finished  wpm: %d  acc: %d%%  ch: %d", model.Stats.WPM, model.Stats.Accuracy, chars)
 	}
+	r.fillLine(model.Layout.StatsY, width, r.styles.Base)
 	x := (width - len(stats)) / 2
 	if x < 0 {
 		x = 0
@@ -106,7 +115,7 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 		return
 	}
 	lineSpacing := 1
-	maxLines := 4
+	maxLines := maxVisibleLines
 	areaTop := model.Layout.StatsY + 2
 	areaBottom := keyboardStartY - 2
 	if areaBottom < areaTop {
@@ -118,17 +127,31 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 		textStartY = areaTop + (areaBottom-areaTop+1-textBlockHeight)/2
 	}
 	cursorIndex := len(model.Text.Typed)
-	activeLine := lineIndexFor(lines, cursorIndex)
-	startLine := 0
-	if activeLine > 1 {
-		startLine = activeLine - 1
-	}
-	if startLine+maxLines > len(lines) {
-		startLine = maxInt(0, len(lines)-maxLines)
+	startLine := defaultStartLine(lines, cursorIndex)
+	if model.Timer.Finished {
+		startLine = model.ReviewStart
+		maxStart := len(lines) - maxLines
+		if maxStart < 0 {
+			maxStart = 0
+		}
+		if startLine < 0 {
+			startLine = 0
+		}
+		if startLine > maxStart {
+			startLine = maxStart
+		}
 	}
 	endLine := startLine + maxLines
 	if endLine > len(lines) {
 		endLine = len(lines)
+	}
+
+	clearTop := model.Layout.StatsY + 1
+	if clearTop > areaTop {
+		clearTop = areaTop
+	}
+	for y := clearTop; y <= areaBottom; y++ {
+		r.fillLine(y, width, r.styles.Base)
 	}
 
 	for i := startLine; i < endLine; i++ {
@@ -142,16 +165,75 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 func (r *Renderer) drawFooter(model *Model, width, height int) {
 	message := " type to start <tab> to reset  <esc> to quit "
 	if model.Timer.Finished {
-		message = " finished <tab> to restart  <esc> to quit "
+		message = " finished <tab> to restart  <esc> to quit  up/down to review "
 	}
 	if model.UI.Message != "" {
 		message = model.UI.Message
 	}
+	r.fillLine(model.Layout.FooterY, width, r.styles.Base)
 	x := (width - len(message)) / 2
 	if x < 0 {
 		x = 0
 	}
 	r.drawString(x, model.Layout.FooterY, message, r.styles.Dim)
+}
+
+func (r *Renderer) drawResults(model *Model, width, height, keyboardStartY int) {
+	resultsTop := model.Layout.FooterY - 2
+	resultsBottom := model.Layout.FooterY - 1
+	if resultsTop < 0 || resultsBottom < 0 || resultsBottom >= height {
+		return
+	}
+	keyboardBottom := keyboardStartY + len(keyboardRows) - 1
+	if resultsTop <= keyboardBottom {
+		return
+	}
+	r.fillLine(resultsTop, width, r.styles.Base)
+	r.fillLine(resultsBottom, width, r.styles.Base)
+	if !model.Results.Visible || !model.Timer.Finished {
+		return
+	}
+	prefix := "final  net: "
+	netValue := fmt.Sprintf("%d", model.Results.NetWPM)
+	rest := fmt.Sprintf("  raw: %d  acc: %d%%  cons: %d", model.Results.RawWPM, model.Results.Accuracy, model.Results.Consistency)
+	lineLen := len(prefix) + len(netValue) + len(rest)
+	startX := (width - lineLen) / 2
+	if startX < 0 {
+		startX = 0
+	}
+	netStyle := r.styles.Dim
+	if model.Results.Improved || !model.Results.HasBaseline {
+		netStyle = r.styles.Accent
+	} else if model.Results.Worse {
+		netStyle = r.styles.Error
+	}
+	r.drawString(startX, resultsTop, prefix, r.styles.Dim)
+	r.drawString(startX+len(prefix), resultsTop, netValue, netStyle)
+	r.drawString(startX+len(prefix)+len(netValue), resultsTop, rest, r.styles.Dim)
+
+	bestLine := fmt.Sprintf("best   wpm: %d  acc: %d%%", model.Results.BestWPM, model.Results.BestAccuracy)
+	indicator := ""
+	indicatorStyle := r.styles.Dim
+	if model.Results.HasBaseline {
+		if model.Results.Improved {
+			indicator = " ^"
+			indicatorStyle = r.styles.Accent
+		} else if model.Results.Worse {
+			indicator = " v"
+			indicatorStyle = r.styles.Error
+		} else {
+			indicator = " ="
+		}
+	}
+	lineLen = len(bestLine) + len(indicator)
+	startX = (width - lineLen) / 2
+	if startX < 0 {
+		startX = 0
+	}
+	r.drawString(startX, resultsBottom, bestLine, r.styles.Dim)
+	if indicator != "" {
+		r.drawString(startX+len(bestLine), resultsBottom, indicator, indicatorStyle)
+	}
 }
 
 func (r *Renderer) drawLine(model *Model, line Line, x, y int) {
@@ -193,10 +275,15 @@ func (r *Renderer) drawKeyboard(model *Model, width, height, keyboardStartY int)
 		if y < 0 || y >= height {
 			continue
 		}
+		r.fillLine(y, width, r.styles.Base)
 		for _, key := range row {
 			style := r.styles.Key
-			if key.Rune != 0 && key.Rune == model.LastKey {
-				style = r.styles.KeyActive
+			if key.Rune != 0 {
+				if key.Rune == model.LastKey {
+					style = r.styles.KeyActive
+				} else if model.Mistakes != nil && model.Mistakes[key.Rune] > 0 {
+					style = r.styles.KeyError
+				}
 			}
 			r.drawKey(x, y, key, style)
 			x += key.Width + keyGap

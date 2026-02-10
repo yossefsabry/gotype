@@ -37,7 +37,9 @@ type Stats struct {
 	Correct   int
 	Incorrect int
 	WPM       int
+	RawWPM    int
 	Accuracy  int
+	Streak    int
 }
 
 type Text struct {
@@ -51,22 +53,27 @@ type UIState struct {
 }
 
 type Model struct {
-	Options   Options
-	Timer     Timer
-	Stats     Stats
-	Text      Text
-	Generator *Generator
-	Layout    Layout
-	UI        UIState
-	ThemeID   string
-	ThemeMenu bool
-	LastKey   rune
-	LastKeyAt time.Time
+	Options     Options
+	Timer       Timer
+	Stats       Stats
+	Text        Text
+	Generator   *Generator
+	Layout      Layout
+	UI          UIState
+	ThemeID     string
+	ThemeMenu   bool
+	LastKey     rune
+	LastKeyAt   time.Time
+	Results     ResultsState
+	ReviewStart int
+	Mistakes    map[rune]int
+	history     StatsHistory
 }
 
 const (
-	initialWordCount = 220
-	extendWordCount  = 80
+	initialWordCount     = 220
+	extendWordCount      = 80
+	keyHighlightDuration = 450 * time.Millisecond
 )
 
 func NewModel() *Model {
@@ -96,6 +103,10 @@ func (m *Model) Reset() {
 		m.Timer = Timer{Remaining: m.Options.Duration}
 	}
 	m.Stats = Stats{}
+	m.ResetResults()
+	m.ResetReview()
+	m.resetMistakes()
+	m.history.Reset()
 	m.LastKey = 0
 	m.UpdateDerived(time.Now())
 }
@@ -123,9 +134,12 @@ func (m *Model) Update(now time.Time) bool {
 			m.Timer.Running = false
 			m.Timer.Finished = true
 			changed = true
-		} else if remaining != m.Timer.Remaining {
-			m.Timer.Remaining = remaining
-			changed = true
+		} else {
+			remaining = remaining.Truncate(time.Second)
+			if remaining != m.Timer.Remaining {
+				m.Timer.Remaining = remaining
+				changed = true
+			}
 		}
 	}
 	if m.Timer.Started {
@@ -137,7 +151,7 @@ func (m *Model) Update(now time.Time) bool {
 		m.UI.Message = ""
 		changed = true
 	}
-	if m.LastKey != 0 && now.Sub(m.LastKeyAt) > 300*time.Millisecond {
+	if m.LastKey != 0 && now.Sub(m.LastKeyAt) > keyHighlightDuration {
 		m.LastKey = 0
 		changed = true
 	}
@@ -151,8 +165,11 @@ func (m *Model) AddRune(r rune, now time.Time) {
 	m.Text.Typed = append(m.Text.Typed, r)
 	if r == expected {
 		m.Stats.Correct++
+		m.Stats.Streak++
 	} else {
 		m.Stats.Incorrect++
+		m.Stats.Streak = 0
+		m.recordMistake(normalizeRune(r))
 	}
 	if m.Options.Mode == ModeWords && len(m.Text.Typed) >= len(m.Text.Target) {
 		m.Timer.Finished = true
@@ -198,24 +215,18 @@ func (m *Model) UpdateDerived(now time.Time) bool {
 		newAccuracy = int(math.Round(float64(m.Stats.Correct) / float64(total) * 100))
 	}
 	newWPM := 0
+	newRawWPM := 0
 	if m.Timer.Started {
-		elapsed := now.Sub(m.Timer.Start)
-		if m.Timer.Finished {
-			if m.Options.Mode == ModeTime {
-				elapsed = m.Options.Duration
-			} else if !m.Timer.End.IsZero() {
-				elapsed = m.Timer.End.Sub(m.Timer.Start)
-			}
-		}
-		if elapsed < time.Second {
-			elapsed = time.Second
-		}
+		elapsed := m.elapsedForStats(now)
 		minutes := elapsed.Minutes()
 		newWPM = int(float64(m.Stats.Correct)/5.0/minutes + 0.5)
+		newRawWPM = int(float64(m.Stats.Correct+m.Stats.Incorrect)/5.0/minutes + 0.5)
+		m.history.Record(elapsed, newWPM)
 	}
-	changed := newAccuracy != m.Stats.Accuracy || newWPM != m.Stats.WPM
+	changed := newAccuracy != m.Stats.Accuracy || newWPM != m.Stats.WPM || newRawWPM != m.Stats.RawWPM
 	m.Stats.Accuracy = newAccuracy
 	m.Stats.WPM = newWPM
+	m.Stats.RawWPM = newRawWPM
 	return changed
 }
 
@@ -254,6 +265,7 @@ func (m *Model) removeTypedRange(start, end int) {
 	}
 	copy(m.Text.Typed[start:], m.Text.Typed[end:])
 	m.Text.Typed = m.Text.Typed[:len(m.Text.Typed)-(end-start)]
+	m.recalculateStreak()
 }
 
 func (m *Model) WordsLeft() int {

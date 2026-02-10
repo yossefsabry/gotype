@@ -96,6 +96,9 @@ func (a *App) loop() error {
 				a.screen.Sync()
 				width, height := a.screen.Size()
 				a.model.Layout.Recalculate(width, height, a.model.Options.Mode)
+				if a.model.Timer.Finished {
+					a.model.InitReviewStart()
+				}
 				needsRender = true
 			case *tcell.EventKey:
 				now := time.Now()
@@ -129,17 +132,20 @@ func (a *App) loop() error {
 }
 
 func (a *App) syncPersistence(now time.Time) {
-	if a.store == nil {
-		return
-	}
-	current := preferencesFromModel(a.model)
-	if current != a.prefs {
-		a.prefs = current
-		a.data.Preferences = current
-		a.store.Save(a.data)
+	if a.store != nil {
+		current := preferencesFromModel(a.model)
+		if current != a.prefs {
+			a.prefs = current
+			a.data.Preferences = current
+			a.store.Save(a.data)
+		}
 	}
 	if a.model.Timer.Finished && !a.finished {
-		if updateBestScore(&a.data, a.model.Options, a.model.Stats, now) {
+		key := scoreKey(a.model.Options)
+		previous, ok := a.data.BestScores[key]
+		a.model.FinalizeResults(previous, ok)
+		a.model.InitReviewStart()
+		if updateBestScore(&a.data, a.model.Options, a.model.Stats, now) && a.store != nil {
 			a.store.Save(a.data)
 		}
 	}
