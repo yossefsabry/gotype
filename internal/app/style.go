@@ -26,8 +26,8 @@ func NewStyles(theme Theme) Styles {
 		Correct:   base.Foreground(theme.Text),
 		Error:     base.Foreground(theme.Error),
 		Cursor:    base.Background(theme.Accent).Foreground(theme.CursorText),
-		Key:       panel.Foreground(theme.Dim),
-		KeyActive: tcell.StyleDefault.Background(theme.Accent).Foreground(theme.CursorText),
+		Key:       tcell.StyleDefault.Background(theme.KeyBackground).Foreground(theme.KeyText),
+		KeyActive: tcell.StyleDefault.Background(theme.KeyActiveBg).Foreground(theme.KeyActiveText),
 		PanelBg:   theme.Panel,
 	}
 }

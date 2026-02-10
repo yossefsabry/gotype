@@ -167,15 +167,29 @@ func (m *Model) Backspace(now time.Time) bool {
 		return false
 	}
 	index := len(m.Text.Typed) - 1
-	expected := m.Text.Target[index]
-	if m.Text.Typed[index] == expected {
-		m.Stats.Correct--
-	} else {
-		m.Stats.Incorrect--
-	}
-	m.Text.Typed = m.Text.Typed[:index]
+	m.removeTypedRange(index, index+1)
 	m.UpdateDerived(now)
 	return true
+}
+
+func (m *Model) BackspaceWord(now time.Time) bool {
+	if len(m.Text.Typed) == 0 {
+		return false
+	}
+	end := len(m.Text.Typed)
+	start := end
+	for start > 0 && m.Text.Typed[start-1] == ' ' {
+		start--
+	}
+	for start > 0 && m.Text.Typed[start-1] != ' ' {
+		start--
+	}
+	if start < end {
+		m.removeTypedRange(start, end)
+		m.UpdateDerived(now)
+		return true
+	}
+	return false
 }
 
 func (m *Model) UpdateDerived(now time.Time) bool {
@@ -218,6 +232,28 @@ func (m *Model) ensureTarget(minLength int) {
 		return
 	}
 	m.Text.Target = m.Generator.Extend(m.Text.Target, extendWordCount, m.Options)
+}
+
+func (m *Model) removeTypedRange(start, end int) {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(m.Text.Typed) {
+		end = len(m.Text.Typed)
+	}
+	if start >= end {
+		return
+	}
+	for i := start; i < end; i++ {
+		expected := m.Text.Target[i]
+		if m.Text.Typed[i] == expected {
+			m.Stats.Correct--
+		} else {
+			m.Stats.Incorrect--
+		}
+	}
+	copy(m.Text.Typed[start:], m.Text.Typed[end:])
+	m.Text.Typed = m.Text.Typed[:len(m.Text.Typed)-(end-start)]
 }
 
 func (m *Model) WordsLeft() int {

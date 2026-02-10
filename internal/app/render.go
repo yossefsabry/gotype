@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -39,8 +38,9 @@ func (r *Renderer) Render(model *Model) {
 	r.drawTopBar(model, width)
 	r.drawThemeMenu(model, width)
 	r.drawStats(model, width)
-	lastLineY := r.drawText(model, width, height)
-	r.drawKeyboard(model, width, height, lastLineY)
+	keyboardStartY := r.keyboardStartY(model, height)
+	r.drawText(model, width, height, keyboardStartY)
+	r.drawKeyboard(model, width, height, keyboardStartY)
 	r.drawFooter(model, width, height)
 
 	r.screen.Show()
@@ -97,45 +97,46 @@ func (r *Renderer) drawStats(model *Model, width int) {
 	r.drawString(x, model.Layout.StatsY, stats, r.styles.Dim)
 }
 
-func (r *Renderer) drawText(model *Model, width, height int) int {
+func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	if width <= 0 || height <= 0 {
-		return model.Layout.TextY
+		return
 	}
 	lines := buildLines(model.Text.Target, model.Layout.TextWidth)
 	if len(lines) == 0 {
-		return model.Layout.TextY
+		return
 	}
-	lineSpacing := 2
-	available := model.Layout.FooterY - model.Layout.TextY - 2
-	if available < 1 {
-		return model.Layout.TextY
+	lineSpacing := 1
+	maxLines := 4
+	areaTop := model.Layout.StatsY + 2
+	areaBottom := keyboardStartY - 2
+	if areaBottom < areaTop {
+		areaBottom = areaTop
 	}
-	maxLines := (available + lineSpacing - 1) / lineSpacing
-	if maxLines < 1 {
-		return model.Layout.TextY
+	textBlockHeight := (maxLines-1)*lineSpacing + 1
+	textStartY := areaTop
+	if areaBottom-areaTop+1 >= textBlockHeight {
+		textStartY = areaTop + (areaBottom-areaTop+1-textBlockHeight)/2
 	}
 	cursorIndex := len(model.Text.Typed)
 	activeLine := lineIndexFor(lines, cursorIndex)
 	startLine := 0
-	if activeLine > 2 {
-		startLine = activeLine - 2
+	if activeLine > 1 {
+		startLine = activeLine - 1
 	}
 	if startLine+maxLines > len(lines) {
-		startLine = int(math.Max(0, float64(len(lines)-maxLines)))
+		startLine = maxInt(0, len(lines)-maxLines)
 	}
 	endLine := startLine + maxLines
 	if endLine > len(lines) {
 		endLine = len(lines)
 	}
 
-	lastLineY := model.Layout.TextY
 	for i := startLine; i < endLine; i++ {
 		line := lines[i]
-		y := model.Layout.TextY + (i-startLine)*lineSpacing
-		lastLineY = y
-		r.drawLine(model, line, model.Layout.TextX, y)
+		y := textStartY + (i-startLine)*lineSpacing
+		lineX := r.centeredLineX(model, line)
+		r.drawLine(model, line, lineX, y)
 	}
-	return lastLineY
 }
 
 func (r *Renderer) drawFooter(model *Model, width, height int) {
@@ -175,42 +176,42 @@ func (r *Renderer) drawLine(model *Model, line Line, x, y int) {
 	}
 }
 
-func (r *Renderer) drawKeyboard(model *Model, width, height, lastLineY int) {
+func (r *Renderer) drawKeyboard(model *Model, width, height, keyboardStartY int) {
 	if len(keyboardRows) == 0 {
 		return
 	}
-	startY := lastLineY + 2
-	keyboardHeight := len(keyboardRows)
-	if startY+keyboardHeight >= model.Layout.FooterY {
-		return
-	}
-	if startY < 0 || startY >= height {
-		return
-	}
+	startY := keyboardStartY
+	keyGap := 2
 	for rowIndex, row := range keyboardRows {
-		rowWidth := keyboardRowWidth(row)
+		rowWidth := keyboardRowWidth(row, keyGap)
 		startX := (width - rowWidth) / 2
+		if startX < 0 {
+			startX = 0
+		}
 		x := startX
 		y := startY + rowIndex
+		if y < 0 || y >= height {
+			continue
+		}
 		for _, key := range row {
 			style := r.styles.Key
 			if key.Rune != 0 && key.Rune == model.LastKey {
 				style = r.styles.KeyActive
 			}
 			r.drawKey(x, y, key, style)
-			x += key.Width + 1
+			x += key.Width + keyGap
 		}
 	}
 }
 
-func keyboardRowWidth(row []Key) int {
+func keyboardRowWidth(row []Key, keyGap int) int {
 	if len(row) == 0 {
 		return 0
 	}
 	width := 0
 	for i, key := range row {
 		if i > 0 {
-			width++
+			width += keyGap
 		}
 		width += key.Width
 	}
@@ -223,6 +224,52 @@ func (r *Renderer) drawKey(x, y int, key Key, style tcell.Style) {
 	}
 	labelX := x + (key.Width-len(key.Label))/2
 	r.drawString(labelX, y, key.Label, style)
+}
+
+func (r *Renderer) keyboardStartY(model *Model, height int) int {
+	keyboardHeight := len(keyboardRows)
+	if keyboardHeight == 0 {
+		return model.Layout.FooterY
+	}
+	gap := 2
+	startY := model.Layout.FooterY - keyboardHeight - gap
+	minY := model.Layout.StatsY + 2
+	if startY < minY {
+		startY = minY
+	}
+	if startY+keyboardHeight >= height {
+		startY = height - keyboardHeight
+	}
+	if startY < 0 {
+		startY = 0
+	}
+	return startY
+}
+
+func (r *Renderer) centeredLineX(model *Model, line Line) int {
+	lineLen := lineVisualWidth(model.Text.Target, line)
+	if model.Layout.TextWidth <= lineLen {
+		return model.Layout.TextX
+	}
+	return model.Layout.TextX + (model.Layout.TextWidth-lineLen)/2
+}
+
+func lineVisualWidth(target []rune, line Line) int {
+	end := line.End
+	for end > line.Start && target[end-1] == ' ' {
+		end--
+	}
+	if end < line.Start {
+		return 0
+	}
+	return end - line.Start
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (r *Renderer) styleForRegion(model *Model, id string) tcell.Style {

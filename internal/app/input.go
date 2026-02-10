@@ -14,8 +14,22 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 	case tcell.KeyTab:
 		m.Reset()
 		return true, false
+	case tcell.KeyCtrlW:
+		if m.Timer.Finished {
+			return false, false
+		}
+		if m.BackspaceWord(now) {
+			return true, false
+		}
+		return false, false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if m.Timer.Finished {
+			return false, false
+		}
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			if m.BackspaceWord(now) {
+				return true, false
+			}
 			return false, false
 		}
 		if m.Backspace(now) {

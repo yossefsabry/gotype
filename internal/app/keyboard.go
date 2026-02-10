@@ -11,7 +11,7 @@ var keyboardRows = [][]Key{
 	newKeyRow("asdfghjkl;'"),
 	newKeyRow("zxcvbnm,./"),
 	{
-		newKey("space", ' ', 12),
+		newKey("space", ' ', 20),
 	},
 }
 
@@ -24,11 +24,11 @@ func newKeyRow(chars string) []Key {
 }
 
 func newKey(label string, key rune, width int) Key {
-	if width < len(label)+2 {
-		width = len(label) + 2
+	if width < len(label)+4 {
+		width = len(label) + 4
 	}
-	if width < 3 {
-		width = 3
+	if width < 5 {
+		width = 5
 	}
 	return Key{Label: label, Rune: key, Width: width}
 }
