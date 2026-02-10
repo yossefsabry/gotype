@@ -2,7 +2,9 @@ package storage
 
 type Preferences struct {
 	ThemeID         string `json:"theme_id"`
+	Mode            string `json:"mode"`
 	DurationSeconds int    `json:"duration_seconds"`
+	WordCount       int    `json:"word_count"`
 	Punctuation     bool   `json:"punctuation"`
 	Numbers         bool   `json:"numbers"`
 }

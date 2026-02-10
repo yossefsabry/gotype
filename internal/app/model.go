@@ -21,6 +21,7 @@ type Options struct {
 	Numbers     bool
 	Mode        Mode
 	Duration    time.Duration
+	WordCount   int
 }
 
 type Timer struct {
@@ -69,8 +70,9 @@ const (
 func NewModel() *Model {
 	model := &Model{
 		Options: Options{
-			Mode:     ModeTime,
-			Duration: 60 * time.Second,
+			Mode:      ModeTime,
+			Duration:  60 * time.Second,
+			WordCount: 50,
 		},
 		Generator: NewGenerator(rand.NewSource(time.Now().UnixNano())),
 		ThemeID:   DefaultThemeID(),
@@ -80,9 +82,17 @@ func NewModel() *Model {
 }
 
 func (m *Model) Reset() {
-	m.Text.Target = m.Generator.Build(initialWordCount, m.Options)
+	if m.Options.Mode == ModeWords {
+		m.Text.Target = m.Generator.Build(m.Options.WordCount, m.Options)
+	} else {
+		m.Text.Target = m.Generator.Build(initialWordCount, m.Options)
+	}
 	m.Text.Typed = m.Text.Typed[:0]
-	m.Timer = Timer{Remaining: m.Options.Duration}
+	if m.Options.Mode == ModeWords {
+		m.Timer = Timer{}
+	} else {
+		m.Timer = Timer{Remaining: m.Options.Duration}
+	}
 	m.Stats = Stats{}
 	m.UpdateDerived(time.Now())
 }
@@ -95,13 +105,15 @@ func (m *Model) StartTimer(now time.Time) {
 	m.Timer.Running = true
 	m.Timer.Finished = false
 	m.Timer.Start = now
-	m.Timer.End = now.Add(m.Options.Duration)
-	m.Timer.Remaining = m.Options.Duration
+	if m.Options.Mode == ModeTime {
+		m.Timer.End = now.Add(m.Options.Duration)
+		m.Timer.Remaining = m.Options.Duration
+	}
 }
 
 func (m *Model) Update(now time.Time) bool {
 	changed := false
-	if m.Timer.Started && m.Timer.Running {
+	if m.Options.Mode == ModeTime && m.Timer.Started && m.Timer.Running {
 		remaining := m.Timer.End.Sub(now)
 		if remaining <= 0 {
 			m.Timer.Remaining = 0
@@ -135,6 +147,11 @@ func (m *Model) AddRune(r rune, now time.Time) {
 	} else {
 		m.Stats.Incorrect++
 	}
+	if m.Options.Mode == ModeWords && len(m.Text.Typed) >= len(m.Text.Target) {
+		m.Timer.Finished = true
+		m.Timer.Running = false
+		m.Timer.End = now
+	}
 	m.UpdateDerived(now)
 }
 
@@ -163,7 +180,11 @@ func (m *Model) UpdateDerived(now time.Time) bool {
 	if m.Timer.Started {
 		elapsed := now.Sub(m.Timer.Start)
 		if m.Timer.Finished {
-			elapsed = m.Options.Duration
+			if m.Options.Mode == ModeTime {
+				elapsed = m.Options.Duration
+			} else if !m.Timer.End.IsZero() {
+				elapsed = m.Timer.End.Sub(m.Timer.Start)
+			}
 		}
 		if elapsed < time.Second {
 			elapsed = time.Second
@@ -186,7 +207,33 @@ func (m *Model) ensureTarget(minLength int) {
 	if len(m.Text.Target) >= minLength {
 		return
 	}
+	if m.Options.Mode == ModeWords {
+		return
+	}
 	m.Text.Target = m.Generator.Extend(m.Text.Target, extendWordCount, m.Options)
+}
+
+func (m *Model) WordsLeft() int {
+	if m.Options.Mode != ModeWords {
+		return 0
+	}
+	index := len(m.Text.Typed)
+	if index >= len(m.Text.Target) {
+		return 0
+	}
+	words := 0
+	inWord := false
+	for i := index; i < len(m.Text.Target); i++ {
+		if m.Text.Target[i] != ' ' {
+			if !inWord {
+				words++
+				inWord = true
+			}
+		} else {
+			inWord = false
+		}
+	}
+	return words
 }
 
 func (m *Model) SetTheme(id string) bool {

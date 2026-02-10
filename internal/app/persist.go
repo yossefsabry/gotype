@@ -75,7 +75,9 @@ func loadPersistedData() (string, storage.Data) {
 func preferencesFromModel(model *Model) storage.Preferences {
 	return storage.Preferences{
 		ThemeID:         model.ThemeID,
+		Mode:            modeToString(model.Options.Mode),
 		DurationSeconds: int(model.Options.Duration.Seconds()),
+		WordCount:       model.Options.WordCount,
 		Punctuation:     model.Options.Punctuation,
 		Numbers:         model.Options.Numbers,
 	}
@@ -83,10 +85,21 @@ func preferencesFromModel(model *Model) storage.Preferences {
 
 func applyPreferences(model *Model, prefs storage.Preferences) bool {
 	changed := false
+	mode := modeFromString(prefs.Mode)
+	if model.Options.Mode != mode {
+		model.Options.Mode = mode
+		changed = true
+	}
 	if prefs.DurationSeconds > 0 {
 		duration := time.Duration(prefs.DurationSeconds) * time.Second
 		if model.Options.Duration != duration {
 			model.Options.Duration = duration
+			changed = true
+		}
+	}
+	if prefs.WordCount > 0 {
+		if model.Options.WordCount != prefs.WordCount {
+			model.Options.WordCount = prefs.WordCount
 			changed = true
 		}
 	}
@@ -108,6 +121,9 @@ func applyPreferences(model *Model, prefs storage.Preferences) bool {
 }
 
 func scoreKey(options Options) string {
+	if options.Mode == ModeWords {
+		return fmt.Sprintf("words:%d|punct=%t|numbers=%t", options.WordCount, options.Punctuation, options.Numbers)
+	}
 	return fmt.Sprintf("time:%ds|punct=%t|numbers=%t", int(options.Duration.Seconds()), options.Punctuation, options.Numbers)
 }
 
@@ -131,4 +147,18 @@ func updateBestScore(data *storage.Data, options Options, stats Stats, now time.
 		Timestamp: now.Unix(),
 	}
 	return true
+}
+
+func modeToString(mode Mode) string {
+	if mode == ModeWords {
+		return "words"
+	}
+	return "time"
+}
+
+func modeFromString(value string) Mode {
+	if value == "words" {
+		return ModeWords
+	}
+	return ModeTime
 }

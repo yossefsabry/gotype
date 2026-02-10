@@ -38,7 +38,7 @@ func Run() error {
 	}
 	data.Preferences = preferencesFromModel(model)
 	width, height := screen.Size()
-	model.Layout.Recalculate(width, height)
+	model.Layout.Recalculate(width, height, model.Options.Mode)
 	var persister *Persister
 	if path != "" {
 		persister = NewPersister(path)
@@ -95,7 +95,7 @@ func (a *App) loop() error {
 			case *tcell.EventResize:
 				a.screen.Sync()
 				width, height := a.screen.Size()
-				a.model.Layout.Recalculate(width, height)
+				a.model.Layout.Recalculate(width, height, a.model.Options.Mode)
 				needsRender = true
 			case *tcell.EventKey:
 				now := time.Now()

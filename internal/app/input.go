@@ -72,21 +72,34 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		case "mode:time":
 			m.Options.Mode = ModeTime
 			m.Reset()
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
+			return true
+		case "mode:words":
+			m.Options.Mode = ModeWords
+			m.Reset()
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
 			return true
 		default:
-			m.SetMessage("only time mode is ready", now, 2*time.Second)
+			m.SetMessage("only time and words are ready", now, 2*time.Second)
 			return true
 		}
-	case strings.HasPrefix(id, "time:"):
-		if duration, ok := timeByRegion[id]; ok {
-			m.Options.Duration = duration
+	case strings.HasPrefix(id, "sel:"):
+		option, ok := selectorByID(id)
+		if !ok {
+			return false
+		}
+		if m.Options.Mode == ModeWords {
+			m.Options.WordCount = option.WordCount
 			m.Reset()
 			return true
 		}
+		m.Options.Duration = option.Duration
+		m.Reset()
+		return true
 	case id == "btn:themes":
 		m.ThemeMenu = !m.ThemeMenu
 		m.Layout.MenuOpen = m.ThemeMenu
-		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height)
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
 		return true
 	case strings.HasPrefix(id, "theme:"):
 		themeID, ok := ThemeIDFromRegion(id)
@@ -96,7 +109,7 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		_ = m.SetTheme(themeID)
 		m.ThemeMenu = false
 		m.Layout.MenuOpen = false
-		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height)
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode)
 		return true
 	}
 	return false

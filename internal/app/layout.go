@@ -1,7 +1,5 @@
 package app
 
-import "time"
-
 type Region struct {
 	ID    string
 	X     int
@@ -29,7 +27,7 @@ type Layout struct {
 	Separators  []int
 }
 
-func (l *Layout) Recalculate(width, height int) {
+func (l *Layout) Recalculate(width, height int, mode Mode) {
 	l.Width = width
 	l.Height = height
 	if l.TopY == 0 {
@@ -64,29 +62,30 @@ func (l *Layout) Recalculate(width, height int) {
 	l.Separators = l.Separators[:0]
 
 	x := 2
-	add := func(id, label string) {
+	add := func(id string) {
+		label := labelForRegion(id, mode)
 		l.Regions = append(l.Regions, Region{ID: id, X: x, Y: l.TopY, Width: len(label)})
 		x += len(label) + 2
 	}
 
-	add("opt:punct", regionLabels["opt:punct"])
-	add("opt:numbers", regionLabels["opt:numbers"])
+	add("opt:punct")
+	add("opt:numbers")
 	l.Separators = append(l.Separators, x)
 	x += 3
 
 	for _, id := range modeOrder {
-		add(id, regionLabels[id])
+		add(id)
 	}
 	l.Separators = append(l.Separators, x)
 	x += 3
 
-	for _, id := range timeOrder {
-		add(id, regionLabels[id])
+	for _, id := range selectorOrder {
+		add(id)
 	}
 	l.Separators = append(l.Separators, x)
 	x += 3
 
-	add("btn:themes", regionLabels["btn:themes"])
+	add("btn:themes")
 
 	if l.MenuOpen {
 		x := 2
@@ -103,34 +102,20 @@ var regionLabels = map[string]string{
 	"opt:numbers": "# numbers",
 	"mode:time":   "time",
 	"mode:words":  "words",
-	"mode:quote":  "quote",
-	"mode:zen":    "zen",
-	"mode:custom": "custom",
-	"time:30s":    "30s",
-	"time:60s":    "60s",
-	"time:10m":    "10m",
-	"time:30m":    "30m",
 	"btn:themes":  "themes",
 }
 
 var modeOrder = []string{
 	"mode:time",
 	"mode:words",
-	"mode:quote",
-	"mode:zen",
-	"mode:custom",
 }
 
-var timeOrder = []string{
-	"time:30s",
-	"time:60s",
-	"time:10m",
-	"time:30m",
-}
-
-var timeByRegion = map[string]time.Duration{
-	"time:30s": 30 * time.Second,
-	"time:60s": 60 * time.Second,
-	"time:10m": 10 * time.Minute,
-	"time:30m": 30 * time.Minute,
+func labelForRegion(id string, mode Mode) string {
+	if label, ok := selectorLabel(id, mode); ok {
+		return label
+	}
+	if label, ok := regionLabels[id]; ok {
+		return label
+	}
+	return id
 }

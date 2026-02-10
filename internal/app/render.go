@@ -54,7 +54,7 @@ func (r *Renderer) drawTopBar(model *Model, width int) {
 	}
 
 	for _, region := range model.Layout.Regions {
-		label := regionLabels[region.ID]
+		label := labelForRegion(region.ID, model.Options.Mode)
 		style := r.styleForRegion(model, region.ID)
 		r.drawString(region.X, region.Y, label, r.panelStyle(style))
 	}
@@ -79,11 +79,13 @@ func (r *Renderer) drawThemeMenu(model *Model, width int) {
 
 func (r *Renderer) drawStats(model *Model, width int) {
 	label := "english"
-	timeLeft := formatDuration(model.Options.Duration)
-	if model.Timer.Started {
-		timeLeft = formatDuration(model.Timer.Remaining)
+	status := "time: " + formatDuration(model.Options.Duration)
+	if model.Options.Mode == ModeWords {
+		status = fmt.Sprintf("words: %d", model.WordsLeft())
+	} else if model.Timer.Started {
+		status = "time: " + formatDuration(model.Timer.Remaining)
 	}
-	stats := fmt.Sprintf("%s  wpm: %d  acc: %d%%  time: %s", label, model.Stats.WPM, model.Stats.Accuracy, timeLeft)
+	stats := fmt.Sprintf("%s  wpm: %d  acc: %d%%  %s", label, model.Stats.WPM, model.Stats.Accuracy, status)
 	if model.Timer.Finished {
 		stats = fmt.Sprintf("finished  wpm: %d  acc: %d%%", model.Stats.WPM, model.Stats.Accuracy)
 	}
@@ -181,8 +183,14 @@ func (r *Renderer) styleForRegion(model *Model, id string) tcell.Style {
 		}
 		return r.styles.Dim
 	case "mode:time":
-		return r.styles.Accent
-	case "mode:words", "mode:quote", "mode:zen", "mode:custom":
+		if model.Options.Mode == ModeTime {
+			return r.styles.Accent
+		}
+		return r.styles.Dim
+	case "mode:words":
+		if model.Options.Mode == ModeWords {
+			return r.styles.Accent
+		}
 		return r.styles.Dim
 	default:
 		if strings.HasPrefix(id, "theme:") {
@@ -192,8 +200,14 @@ func (r *Renderer) styleForRegion(model *Model, id string) tcell.Style {
 			}
 			return r.styles.Dim
 		}
-		if duration, ok := timeByRegion[id]; ok {
-			if model.Options.Duration == duration {
+		if option, ok := selectorByID(id); ok {
+			if model.Options.Mode == ModeWords {
+				if model.Options.WordCount == option.WordCount {
+					return r.styles.Accent
+				}
+				return r.styles.Dim
+			}
+			if model.Options.Duration == option.Duration {
 				return r.styles.Accent
 			}
 			return r.styles.Dim
