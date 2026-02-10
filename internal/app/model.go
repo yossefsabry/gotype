@@ -60,6 +60,8 @@ type Model struct {
 	UI        UIState
 	ThemeID   string
 	ThemeMenu bool
+	LastKey   rune
+	LastKeyAt time.Time
 }
 
 const (
@@ -94,6 +96,7 @@ func (m *Model) Reset() {
 		m.Timer = Timer{Remaining: m.Options.Duration}
 	}
 	m.Stats = Stats{}
+	m.LastKey = 0
 	m.UpdateDerived(time.Now())
 }
 
@@ -132,6 +135,10 @@ func (m *Model) Update(now time.Time) bool {
 	}
 	if m.UI.Message != "" && now.After(m.UI.MessageUntil) {
 		m.UI.Message = ""
+		changed = true
+	}
+	if m.LastKey != 0 && now.Sub(m.LastKeyAt) > 300*time.Millisecond {
+		m.LastKey = 0
 		changed = true
 	}
 	return changed

@@ -27,6 +27,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 		if r == '\n' {
 			return false, false
 		}
+		m.registerKey(r, now)
 		if m.Timer.Finished {
 			if r == 'r' || r == 'R' {
 				m.Reset()
@@ -41,6 +42,14 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 		return true, false
 	}
 	return false, false
+}
+
+func (m *Model) registerKey(r rune, now time.Time) {
+	if r >= 'A' && r <= 'Z' {
+		r = r + ('a' - 'A')
+	}
+	m.LastKey = r
+	m.LastKeyAt = now
 }
 
 func (m *Model) HandleClick(x, y int, now time.Time) bool {
