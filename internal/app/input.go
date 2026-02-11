@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// handle click key and check what is doing
 func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 	switch event.Key() {
 	case tcell.KeyCtrlC, tcell.KeyEsc:
@@ -66,6 +67,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 			return true, false
 		}
 		return false, false
+	// Handle regular character input
 	case tcell.KeyRune:
 		r := event.Rune()
 		if r == '\n' {
@@ -88,6 +90,7 @@ func (m *Model) HandleKey(event *tcell.EventKey, now time.Time) (bool, bool) {
 	return false, false
 }
 
+// saving last key for options and menu
 func (m *Model) registerKey(r rune, now time.Time) {
 	r = normalizeRune(r)
 	m.LastKey = r
@@ -99,9 +102,11 @@ func (m *Model) registerKey(r rune, now time.Time) {
 func (m *Model) HandleClick(x, y int, now time.Time) bool {
 	for _, region := range m.Layout.Regions {
 		if region.Contains(x, y) {
+			// If the click is within a region, apply the corresponding action
 			return m.applyRegion(region.ID, now)
 		}
 	}
+	// Also check menu regions if the click is within the menu area
 	for _, region := range m.Layout.MenuRegions {
 		if region.Contains(x, y) {
 			return m.applyRegion(region.ID, now)
@@ -110,7 +115,12 @@ func (m *Model) HandleClick(x, y int, now time.Time) bool {
 	return false
 }
 
+// check for position for actions and apply them if the click is within a region
 func (m *Model) applyRegion(id string, now time.Time) bool {
+	// so now this how gone work first gone check for x, y if on the regions 
+	// so the regions is just value for position for the buttons so if x,y on 
+	// position for specific region passing the id for this region and then 
+	// apply the action that it's donig 
 	switch {
 	case id == "opt:punct":
 		m.Options.Punctuation = !m.Options.Punctuation
@@ -125,15 +135,18 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		case "mode:time":
 			m.Options.Mode = ModeTime
 			m.Reset()
-			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height,
+				m.Options.Mode, m.focusActive())
 			return true
 		case "mode:words":
 			m.Options.Mode = ModeWords
 			m.Reset()
-			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
+			m.Layout.Recalculate(m.Layout.Width, m.Layout.Height,
+				m.Options.Mode, m.focusActive())
 			return true
 		}
 		return false
+	// change the options for words or time and reset the test
 	case strings.HasPrefix(id, "sel:"):
 		option, ok := selectorByID(id)
 		if !ok {
@@ -147,16 +160,22 @@ func (m *Model) applyRegion(id string, now time.Time) bool {
 		m.Options.Duration = option.Duration
 		m.Reset()
 		return true
+	// themes and shit
 	case id == "btn:themes":
 		m.ThemeMenu = !m.ThemeMenu
 		m.Layout.MenuOpen = m.ThemeMenu
-		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height, m.Options.Mode, m.focusActive())
+		m.Layout.Recalculate(m.Layout.Width, m.Layout.Height,
+			m.Options.Mode, m.focusActive())
 		return true
 	case strings.HasPrefix(id, "theme:"):
+		// so the theme is just value for the theme that we want to change 
+		// to it so if the click on the region for specific theme we get the 
+		// id for this theme and then set it as current theme
 		themeID, ok := ThemeIDFromRegion(id)
 		if !ok {
 			return false
 		}
+		// so we get the theme id from the region id and then set it as current theme
 		_ = m.SetTheme(themeID)
 		m.ThemeMenu = false
 		m.Layout.MenuOpen = false

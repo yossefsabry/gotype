@@ -8,6 +8,7 @@ import (
 
 type Mode int
 
+// for the two modes
 const (
 	ModeTime Mode = iota
 	ModeWords
