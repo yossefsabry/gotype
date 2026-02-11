@@ -94,6 +94,8 @@ func (m *Model) registerKey(r rune, now time.Time) {
 	m.LastKeyAt = now
 }
 
+// HandleClick checks if the click at (x, y) is within any interactive 
+// region and applies the corresponding action.
 func (m *Model) HandleClick(x, y int, now time.Time) bool {
 	for _, region := range m.Layout.Regions {
 		if region.Contains(x, y) {
