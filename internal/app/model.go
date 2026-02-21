@@ -71,12 +71,14 @@ type Model struct {
 	lastDerivedSecond int64
 }
 
+// this value for the inital word count
 const (
 	initialWordCount     = 220
 	extendWordCount      = 80
 	keyHighlightDuration = 450 * time.Millisecond
 )
 
+// creating the model
 func NewModel() *Model {
 	model := &Model{
 		Options: Options{
@@ -91,6 +93,7 @@ func NewModel() *Model {
 	return model
 }
 
+// updating the model to the initial state
 func (m *Model) Reset() {
 	if m.Options.Mode == ModeWords {
 		m.Text.Target = m.Generator.Build(m.Options.WordCount, m.Options)
@@ -115,6 +118,7 @@ func (m *Model) Reset() {
 	m.syncLayoutFocus()
 }
 
+// when start typing the timer starts
 func (m *Model) StartTimer(now time.Time) {
 	if m.Timer.Started {
 		return
@@ -130,6 +134,7 @@ func (m *Model) StartTimer(now time.Time) {
 	m.syncLayoutFocus()
 }
 
+// update the mode data every second and when needed
 func (m *Model) Update(now time.Time) bool {
 	changed := false
 	if m.Options.Mode == ModeTime && m.Timer.Started && m.Timer.Running {
@@ -169,6 +174,7 @@ func (m *Model) Update(now time.Time) bool {
 	return changed
 }
 
+// when user type char add it to the text and update the prograph view
 func (m *Model) AddRune(r rune, now time.Time) {
 	index := len(m.Text.Typed)
 	m.ensureTarget(index + 1)
@@ -191,6 +197,7 @@ func (m *Model) AddRune(r rune, now time.Time) {
 	m.syncLayoutFocus()
 }
 
+// remove the last char and update the prograph view
 func (m *Model) Backspace(now time.Time) bool {
 	if len(m.Text.Typed) == 0 {
 		return false
@@ -201,6 +208,7 @@ func (m *Model) Backspace(now time.Time) bool {
 	return true
 }
 
+// remove the last word and update the prograph view
 func (m *Model) BackspaceWord(now time.Time) bool {
 	if len(m.Text.Typed) == 0 {
 		return false
@@ -221,6 +229,7 @@ func (m *Model) BackspaceWord(now time.Time) bool {
 	return false
 }
 
+// calc the WPM and accuracy every second and when needed
 func (m *Model) UpdateDerived(now time.Time) bool {
 	newAccuracy := 100
 	if total := m.Stats.Correct + m.Stats.Incorrect; total > 0 {
@@ -245,11 +254,13 @@ func (m *Model) UpdateDerived(now time.Time) bool {
 	return changed
 }
 
+// set the message to show in the UI for a certain duration
 func (m *Model) SetMessage(text string, now time.Time, duration time.Duration) {
 	m.UI.Message = text
 	m.UI.MessageUntil = now.Add(duration)
 }
 
+// ensure the target text is long enough to type, if not extend it
 func (m *Model) ensureTarget(minLength int) {
 	if len(m.Text.Target) >= minLength {
 		return
@@ -261,6 +272,7 @@ func (m *Model) ensureTarget(minLength int) {
 	m.bumpTargetVersion()
 }
 
+// remove the typed chars in the given range
 func (m *Model) removeTypedRange(start, end int) {
 	if start < 0 {
 		start = 0
@@ -284,6 +296,8 @@ func (m *Model) removeTypedRange(start, end int) {
 	m.recalculateStreak()
 }
 
+// recalculate the current streak after removing chars
+// this is needed to update the streak after backspacing
 func (m *Model) WordsLeft() int {
 	if m.Options.Mode != ModeWords {
 		return 0
@@ -307,6 +321,7 @@ func (m *Model) WordsLeft() int {
 	return words
 }
 
+// set the theme and return true if it changed
 func (m *Model) SetTheme(id string) bool {
 	if m.ThemeID == id {
 		return false

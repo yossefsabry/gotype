@@ -7,7 +7,7 @@ type Line struct {
 
 const (
 	maxWordsPerLine = 10
-	maxVisibleLines = 4
+	maxVisibleLines = 3
 )
 
 func buildLines(target []rune, width int) []Line {
