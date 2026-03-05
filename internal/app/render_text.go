@@ -4,6 +4,10 @@ import "github.com/gdamore/tcell/v2"
 
 const usePlainText = true
 
+// textScale is the size of each character in terminal cells. The default is 2,
+// which means each character is rendered as a 2x2 block of cells. Setting it to 1
+// will render characters as single cells, which may be less visually appealing 
+// but can fit more text on the screen.
 func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	if width <= 0 || height <= 0 {
 		return
@@ -87,6 +91,7 @@ func (r *Renderer) drawText(model *Model, width, height, keyboardStartY int) {
 	}
 }
 
+// drawLine renders a single line of text at the specified position.
 func (r *Renderer) drawLine(model *Model, line Line, x, y, scale int) {
 	if y < 0 || y >= model.Layout.Height {
 		return
@@ -114,6 +119,8 @@ func (r *Renderer) drawLine(model *Model, line Line, x, y, scale int) {
 	}
 }
 
+// centeredLineX calculates the starting X position for a line of text to 
+// be centered within the available text area.
 func (r *Renderer) centeredLineX(model *Model, line Line, scale int) int {
 	lineLen := lineVisualWidth(model.Text.Target, line, scale)
 	if model.Layout.TextWidth <= lineLen {
@@ -133,6 +140,9 @@ func lineVisualWidth(target []rune, line Line, scale int) int {
 	return (end - line.Start) * scale
 }
 
+// drawRuneBlock renders a single character as a block of cells. If the 
+// character has a defined glyph, it uses that to determine which cells to fill.
+// Otherwise, it fills a solid block for the character.
 func (r *Renderer) drawRuneBlock(x, y int, ch rune, style tcell.Style, scale int) {
 	if scale != textScale {
 		for dy := 0; dy < scale; dy++ {

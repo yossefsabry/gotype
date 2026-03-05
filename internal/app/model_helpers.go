@@ -2,6 +2,8 @@ package app
 
 import "time"
 
+
+// calc the time for stats
 func (m *Model) elapsedForStats(now time.Time) time.Duration {
 	elapsed := now.Sub(m.Timer.Start)
 	if m.Timer.Finished {
@@ -17,10 +19,12 @@ func (m *Model) elapsedForStats(now time.Time) time.Duration {
 	return elapsed
 }
 
+// check if the layout should be focused based on the timer state
 func (m *Model) focusActive() bool {
 	return m.Timer.Started && !m.Timer.Finished
 }
 
+// sync the layout focus with the timer state and recalculate if needed
 func (m *Model) syncLayoutFocus() bool {
 	focus := m.focusActive()
 	if m.Layout.Focus == focus {
@@ -34,6 +38,7 @@ func (m *Model) syncLayoutFocus() bool {
 	return true
 }
 
+// reset the mistakes map for the model
 func (m *Model) resetMistakes() {
 	if m.Mistakes == nil {
 		m.Mistakes = make(map[rune]int, 32)
@@ -44,6 +49,7 @@ func (m *Model) resetMistakes() {
 	}
 }
 
+// record a mistake for a given rune in the model's mistakes map
 func (m *Model) recordMistake(r rune) {
 	if m.Mistakes == nil {
 		m.Mistakes = make(map[rune]int, 32)
@@ -51,6 +57,7 @@ func (m *Model) recordMistake(r rune) {
 	m.Mistakes[r]++
 }
 
+// recalculate the current streak of correct characters in the model's stats
 func (m *Model) recalculateStreak() {
 	streak := 0
 	for i := len(m.Text.Typed) - 1; i >= 0; i-- {

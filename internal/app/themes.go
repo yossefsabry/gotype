@@ -2,6 +2,7 @@ package app
 
 import "github.com/gdamore/tcell/v2"
 
+// template for theme option
 type Theme struct {
 	ID            string
 	Label         string
@@ -18,6 +19,7 @@ type Theme struct {
 	KeyActiveText tcell.Color
 }
 
+// all theme options
 var themeOptions = []Theme{
 	{
 		ID:            "rose-pine",
@@ -113,10 +115,12 @@ var themeOptions = []Theme{
 
 const themeRegionPrefix = "theme:"
 
+// return all themes
 func ThemeOptions() []Theme {
 	return themeOptions
 }
 
+// return default theme id (first in list or "dark" if empty)
 func DefaultThemeID() string {
 	if len(themeOptions) == 0 {
 		return "dark"
@@ -124,6 +128,7 @@ func DefaultThemeID() string {
 	return themeOptions[0].ID
 }
 
+// search theme by id, return first if not found or empty
 func ThemeByID(id string) Theme {
 	for _, theme := range themeOptions {
 		if theme.ID == id {
@@ -136,6 +141,7 @@ func ThemeByID(id string) Theme {
 	return themeOptions[0]
 }
 
+// search theme label by id, return id if not found
 func ThemeLabel(id string) string {
 	for _, theme := range themeOptions {
 		if theme.ID == id {
@@ -145,13 +151,16 @@ func ThemeLabel(id string) string {
 	return id
 }
 
+// helper to create region id for theme
 func ThemeRegionID(id string) string {
 	return themeRegionPrefix + id
 }
 
+// extract theme id from region id, return false if not valid
 func ThemeIDFromRegion(region string) (string, bool) {
-	if len(region) <= len(themeRegionPrefix) || region[:len(themeRegionPrefix)] != themeRegionPrefix {
-		return "", false
+	if len(region) <= len(themeRegionPrefix) ||
+		region[:len(themeRegionPrefix)] != themeRegionPrefix {
+			return "", false
 	}
 	return region[len(themeRegionPrefix):], true
 }

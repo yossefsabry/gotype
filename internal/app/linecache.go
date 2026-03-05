@@ -6,10 +6,14 @@ type LineCache struct {
 	lines   []Line
 }
 
+// bumpTargetVersion increments the target version to indicate that the 
+// text has changed and the line cache should be invalidated.
 func (m *Model) bumpTargetVersion() {
 	m.targetVersion++
 }
 
+// linesForWidth returns the cached lines for the given 
+// width if the cache is valid.
 func (m *Model) linesForWidth(width int) []Line {
 	if width <= 0 {
 		return nil

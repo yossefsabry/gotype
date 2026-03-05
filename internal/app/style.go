@@ -2,6 +2,7 @@ package app
 
 import "github.com/gdamore/tcell/v2"
 
+// styles for different UI elements based on theme
 type Styles struct {
 	Base      tcell.Style
 	Panel     tcell.Style
@@ -16,6 +17,7 @@ type Styles struct {
 	PanelBg   tcell.Color
 }
 
+// create styles from theme colors
 func NewStyles(theme Theme) Styles {
 	base := tcell.StyleDefault.Background(theme.Background).Foreground(theme.Text)
 	panel := tcell.StyleDefault.Background(theme.Panel).Foreground(theme.Text)
@@ -34,6 +36,8 @@ func NewStyles(theme Theme) Styles {
 	}
 }
 
+// convert hex too tcell color
+// for remapping the colors too the nearest colors that is supported by the terminal
 func hexColor(value int32) tcell.Color {
 	return tcell.NewHexColor(value)
 }

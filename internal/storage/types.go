@@ -1,5 +1,7 @@
 package storage
 
+// some times for saving user data
+
 type Preferences struct {
 	ThemeID         string `json:"theme_id"`
 	Mode            string `json:"mode"`

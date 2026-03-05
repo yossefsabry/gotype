@@ -7,10 +7,14 @@ type Region struct {
 	Width int
 }
 
+// this function checks if the given x and y coordinates are within the 
+// horizontal bounds of the region (between X and X+Width)
+// and on the same vertical line (Y)
 func (r Region) Contains(x, y int) bool {
 	return y == r.Y && x >= r.X && x < r.X+r.Width
 }
 
+// main layout struct that holds the positions and dimensions of various UI elements
 type Layout struct {
 	Width       int
 	Height      int
@@ -28,6 +32,8 @@ type Layout struct {
 	Separators  []int
 }
 
+// making a resize function that recalculates the layout based on the new 
+// width and height of the terminal
 func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 	l.Width = width
 	l.Height = height
@@ -55,10 +61,7 @@ func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 	}
 	l.FooterY = height - 2
 
-	textWidth := width - 8
-	if textWidth > 90 {
-		textWidth = 90
-	}
+	textWidth := min(width - 8, 90)
 	if textWidth < 30 {
 		textWidth = width - 4
 	}
@@ -76,6 +79,7 @@ func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 	}
 
 	x := 2
+	// adding options and modes regions
 	add := func(id string) {
 		label := labelForRegion(id, mode)
 		l.Regions = append(l.Regions, Region{ID: id, X: x, Y: l.TopY, Width: len(label)})
@@ -87,12 +91,14 @@ func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 	l.Separators = append(l.Separators, x)
 	x += 3
 
+	// adding all modes
 	for _, id := range modeOrder {
 		add(id)
 	}
 	l.Separators = append(l.Separators, x)
 	x += 3
 
+	// adding all selectors times
 	for _, id := range selectorOrder {
 		add(id)
 	}
@@ -103,6 +109,7 @@ func (l *Layout) Recalculate(width, height int, mode Mode, focus bool) {
 
 	if menuOpen {
 		x := 2
+		// adding all themes for menu themes
 		for _, theme := range ThemeOptions() {
 			label := theme.Label
 			l.MenuRegions = append(l.MenuRegions, Region{ID: ThemeRegionID(theme.ID), X: x, Y: l.MenuY, Width: len(label)})
@@ -124,6 +131,7 @@ var modeOrder = []string{
 	"mode:words",
 }
 
+// so this is return the selector label based on the id and mode, if the id is not a selector or if the
 func labelForRegion(id string, mode Mode) string {
 	if label, ok := selectorLabel(id, mode); ok {
 		return label

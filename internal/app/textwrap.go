@@ -10,6 +10,7 @@ const (
 	maxVisibleLines = 3
 )
 
+// making a pipline for making max words per line and max visiable line
 func buildLines(target []rune, width int) []Line {
 	if width <= 0 || len(target) == 0 {
 		return nil
@@ -57,6 +58,7 @@ type wordRange struct {
 	End   int
 }
 
+// collectWords identifies the start and end indices of each word in the target text.
 func collectWords(target []rune) []wordRange {
 	words := make([]wordRange, 0, 64)
 	start := -1
@@ -78,6 +80,7 @@ func collectWords(target []rune) []wordRange {
 	return words
 }
 
+// lineIndexFor returns the index of the line that contains the given character index.
 func lineIndexFor(lines []Line, index int) int {
 	if len(lines) == 0 {
 		return 0
@@ -90,6 +93,7 @@ func lineIndexFor(lines []Line, index int) int {
 	return len(lines) - 1
 }
 
+// defaultStartLine calculates the starting line index for rendering based on the cursor position.
 func defaultStartLine(lines []Line, cursorIndex int) int {
 	if len(lines) == 0 {
 		return 0

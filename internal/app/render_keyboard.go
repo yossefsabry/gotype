@@ -2,6 +2,7 @@ package app
 
 import "github.com/gdamore/tcell/v2"
 
+// marign and padding 
 const (
 	keyboardKeyGap        = 1
 	keyboardMinKeyGap     = 0
@@ -11,6 +12,13 @@ const (
 	keyboardMinKeyPadding = 1
 )
 
+
+// render the on-screen keyboard based on the current model state.
+// It calculates the layout of the keyboard and draws each key with the appropriate style 
+// (active, error, or normal) depending on the user's input and mistakes.
+// The keyboard is centered horizontally and positioned above the footer,
+// with a gap defined by keyboardFooterGap. If the available space is insufficient
+// to display the keyboard, it will be hidden.
 func (r *Renderer) drawKeyboard(model *Model, width, height, keyboardStartY int) {
 	if len(keyboardRows) == 0 || width <= 0 || height <= 0 {
 		return
@@ -47,6 +55,8 @@ func (r *Renderer) drawKeyboard(model *Model, width, height, keyboardStartY int)
 	}
 }
 
+// keyboardHeight calculates the total height of the on-screen keyboard based 
+// on the number of rows and the defined gaps between them.
 func keyboardHeight() int {
 	if len(keyboardRows) == 0 {
 		return 0
@@ -54,6 +64,11 @@ func keyboardHeight() int {
 	return len(keyboardRows) + (len(keyboardRows)-1)*keyboardRowGap
 }
 
+
+// keyboardRowLayout determines the width of each key in a given row and the total width of the row
+// based on the available width. It tries to fit the keys within the available space by 
+// adjusting the gaps and key widths while respecting the minimum key width and padding requirements. 
+// The function returns the calculated widths for each key, the gap used between keys, and the total row width.
 func keyboardRowLayout(row []Key, availableWidth int) ([]int, int, int) {
 	if len(row) == 0 {
 		return nil, keyboardKeyGap, 0
@@ -133,6 +148,8 @@ func keyboardRowLayout(row []Key, availableWidth int) ([]int, int, int) {
 	return widths, keyGap, rowWidth
 }
 
+// minKeyWidth calculates the minimum width for a given key based on its 
+// label length and defined padding.
 func minKeyWidth(key Key) int {
 	minWidth := len(key.Label) + keyboardMinKeyPadding
 	if minWidth < keyboardMinKeyWidth {
@@ -155,6 +172,8 @@ func sumKeyWidths(widths []int) int {
 	return sum
 }
 
+// drawKey renders a single key on the screen at the specified position 
+// with the given width and style.
 func (r *Renderer) drawKey(x, y int, key Key, width int, style tcell.Style) {
 	for i := 0; i < width; i++ {
 		r.setContent(x+i, y, ' ', style)
@@ -163,6 +182,8 @@ func (r *Renderer) drawKey(x, y int, key Key, width int, style tcell.Style) {
 	r.drawString(labelX, y, key.Label, style)
 }
 
+// keyboardStartY calculates the starting Y position for the on-screen keyboard 
+// based on the model's layout and the available height.
 func (r *Renderer) keyboardStartY(model *Model, height int) int {
 	keyboardHeight := keyboardHeight()
 	if keyboardHeight == 0 {

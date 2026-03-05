@@ -2,6 +2,7 @@ package app
 
 import "time"
 
+// template for selector options
 type SelectorOption struct {
 	ID        string
 	Duration  time.Duration
@@ -10,6 +11,7 @@ type SelectorOption struct {
 	LabelWord string
 }
 
+// all selector options
 var selectorOptions = []SelectorOption{
 	{
 		ID:        "sel:30s",
@@ -41,6 +43,7 @@ var selectorOptions = []SelectorOption{
 	},
 }
 
+// id order for displaying selectors
 var selectorOrder = []string{
 	"sel:30s",
 	"sel:60s",
@@ -48,6 +51,7 @@ var selectorOrder = []string{
 	"sel:30m",
 }
 
+// helper to find selector option by id (search)
 func selectorByID(id string) (SelectorOption, bool) {
 	for _, option := range selectorOptions {
 		if option.ID == id {
@@ -57,6 +61,7 @@ func selectorByID(id string) (SelectorOption, bool) {
 	return SelectorOption{}, false
 }
 
+// helper to get label for selector by id and mode (search)
 func selectorLabel(id string, mode Mode) (string, bool) {
 	option, ok := selectorByID(id)
 	if !ok {
